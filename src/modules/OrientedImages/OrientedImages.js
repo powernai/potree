@@ -74,9 +74,9 @@ export class OrientedImage{
 		this.width = 0;
 		this.height = 0;
 		this.fov = 1.0;
-
 		const material = createMaterial();
 		const lineMaterial = new THREE.LineBasicMaterial( { color: 0xffffff } );
+		lineMaterial.opacity = 0.2;
 		this.mesh = new THREE.Mesh(planeGeometry, material);
 		this.line = new THREE.Line(lineGeometry, lineMaterial);
 		this.texture = null;
@@ -260,7 +260,8 @@ export class OrientedImageLoader{
 		const orientedImages = [];
 		const sceneNode = new THREE.Object3D();
 		sceneNode.name = "oriented_images";
-
+		const link = imageParamsPath.substring(0,imageParamsPath.lastIndexOf("/"));
+		
 		for(const params of imageParams){
 
 			// const material = createMaterial();
