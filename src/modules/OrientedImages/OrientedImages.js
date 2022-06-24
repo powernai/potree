@@ -409,6 +409,7 @@ export class OrientedImageLoader{
 
 				const target = image;
 
+				/*
 				const tmpImagePath = `${Potree.resourcePath}/images/loading.jpg`;
 				new THREE.TextureLoader().load(tmpImagePath,
 					(texture) => {
@@ -419,6 +420,7 @@ export class OrientedImageLoader{
 						}
 					}
 				);
+				*/
 
 				const imagePath = `${imageParamsPath}/../${target.id}`;
 				new THREE.TextureLoader().load(imagePath,
@@ -481,7 +483,6 @@ export class OrientedImageLoader{
 		images.imageParams = imageParams;
 		images.images = orientedImages;
 		images.moveToImage = moveToImage;
-
 
 		Potree.debug.moveToImage = moveToImage;
 
