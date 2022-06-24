@@ -76,7 +76,7 @@ export class OrientedImage{
 		this.fov = 1.0;
 
 		const material = createMaterial();
-		const lineMaterial = new THREE.LineBasicMaterial( { color: 0x00ff00 } );
+		const lineMaterial = new THREE.LineBasicMaterial( { color: 0xffffff } );
 		this.mesh = new THREE.Mesh(planeGeometry, material);
 		this.line = new THREE.Line(lineGeometry, lineMaterial);
 		this.texture = null;
@@ -311,7 +311,7 @@ export class OrientedImageLoader{
 		const onMouseMove = (evt) => {
 			const tStart = performance.now();
 			if(hoveredElement){
-				hoveredElement.line.material.color.setRGB(0, 1, 0);
+				hoveredElement.line.material.color.setRGB(1, 1, 1);
 			}
 			evt.preventDefault();
 
@@ -434,7 +434,6 @@ export class OrientedImageLoader{
 		};
 
 		const onMouseClick = (evt) => {
-
 			if(orientedImageControls.hasSomethingCaptured()){
 				return;
 			}
@@ -481,6 +480,8 @@ export class OrientedImageLoader{
 		images.cameraParams = cameraParams;
 		images.imageParams = imageParams;
 		images.images = orientedImages;
+		images.moveToImage = moveToImage;
+
 
 		Potree.debug.moveToImage = moveToImage;
 
