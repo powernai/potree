@@ -65,13 +65,13 @@ export class OrientedImageControls extends EventDispatcher{
 		};
 		
 		let mouseDown = (e)=> {
-			if (this.image && e.button === leftClick) {
+			if (this.image) {
 				mouse.down = true;
 			}
 		};
 		
 		let mouseUp = (e) => {
-			if (this.image && e.button === leftClick) {
+			if (this.image) {
 				mouse.down = false;
 
 			}
@@ -92,14 +92,25 @@ export class OrientedImageControls extends EventDispatcher{
 				this.release();
 			}
 		};
-
-		this.addEventListener('mousewheel', scroll);
 		
-		//determine scroll
-		window.addEventListener('mousedown', mouseDown);
-		window.addEventListener('mouseup', mouseUp);
+		//controls
+		this.addEventListener('mousewheel', scroll);
+		this.addEventListener('mousedown', mouseDown);
+		this.addEventListener('mouseup', mouseUp);
 		window.addEventListener('mousemove', mouseMove);
-		window.addEventListener('contextmenu', exit);
+		
+		//exit
+		window.addEventListener('mousedown', (e)=>{
+			if (event.button === rightClick ) {
+				exit();	
+			}
+		});
+		
+		window.addEventListener('keydown', (e) => {
+			if(event.key === "Escape"){
+				exit();
+			}
+		});
 	}
 	
 	up(mov = moveDefault) {
@@ -263,4 +274,4 @@ export class OrientedImageControls extends EventDispatcher{
 
 		this.fovDelta *= attenuation;
 	}
-};
+}
