@@ -1,12 +1,13 @@
 
 import * as THREE from "../../../libs/three.js/build/three.module.js";
 import {EventDispatcher} from "../../EventDispatcher.js";
-
  
 export class OrientedImageControls extends EventDispatcher{
-	
 	constructor(viewer){
 		super();
+		
+		//used to add scene control callback;
+		this.releaseAction = (image)=>{};
 		
 		this.viewer = viewer;
 		this.renderer = viewer.renderer;
@@ -30,11 +31,11 @@ export class OrientedImageControls extends EventDispatcher{
 		this.shear = [0, 0];
 
 		// const style = ``;
-		this.elUp =    $(`<input type="button" value="🡅" style="position: absolute; top: 10px; left: calc(50%); z-index: 1000" />`);
-		this.elRight = $(`<input type="button" value="🡆" style="position: absolute; top: calc(50%); right: 10px; z-index: 1000" />`);
-		this.elDown =  $(`<input type="button" value="🡇" style="position: absolute; bottom: 10px; left: calc(50%); z-index: 1000" />`);
-		this.elLeft =  $(`<input type="button" value="🡄" style="position: absolute; top: calc(50%); left: 10px; z-index: 1000" />`);
-		this.elExit = $(`<input type="button" value="Back to 3D view" style="position: absolute; bottom: 10px; right: 10px; z-index: 1000" />`);
+		this.elUp =    $(`<input type="button" value="🡅" style="position: absolute; top: 10px; left: calc(50%); z-index: 100000" />`);
+		this.elRight = $(`<input type="button" value="🡆" style="position: absolute; top: calc(50%); right: 10px; z-index: 100000" />`);
+		this.elDown =  $(`<input type="button" value="🡇" style="position: absolute; bottom: 10px; left: calc(50%); z-index: 100000" />`);
+		this.elLeft =  $(`<input type="button" value="🡄" style="position: absolute; top: calc(50%); left: 10px; z-index: 100000" />`);
+		this.elExit = $(`<input type="button" value="Back to 3D view" style="position: absolute; bottom: 10px; right: 10px; z-index: 100000" />`);
 
 		this.elExit.click( () => {
 			this.release();
@@ -104,8 +105,14 @@ export class OrientedImageControls extends EventDispatcher{
 		elRoot.append(this.elLeft);
 		elRoot.append(this.elExit);
 	}
+	
+	setReleaseAction(action=()=>{}) {
+		this.releaseAction = action;
+	}
 
 	release(){
+		this.releaseAction(this.image);
+		
 		this.image = null;
 
 		this.viewer.scene.overrideCamera = null;

@@ -245,17 +245,6 @@ export class OrientedImageLoader{
 		const tEnd = performance.now();
 		console.log(tEnd - tStart);
 
-		// const sp = new THREE.PlaneGeometry(1, 1);
-		// const lg = new THREE.Geometry();
-
-		// lg.vertices.push(
-		// 	new THREE.Vector3(-0.5, -0.5, 0),
-		// 	new THREE.Vector3( 0.5, -0.5, 0),
-		// 	new THREE.Vector3( 0.5,  0.5, 0),
-		// 	new THREE.Vector3(-0.5,  0.5, 0),
-		// 	new THREE.Vector3(-0.5, -0.5, 0),
-		// );
-
 		const {width, height} = cameraParams;
 		const orientedImages = [];
 		const sceneNode = new THREE.Object3D();
@@ -263,38 +252,8 @@ export class OrientedImageLoader{
 		const link = imageParamsPath.substring(0,imageParamsPath.lastIndexOf("/"));
 		
 		for(const params of imageParams){
-
-			// const material = createMaterial();
-			// const lm = new THREE.LineBasicMaterial( { color: 0x00ff00 } );
-			// const mesh = new THREE.Mesh(sp, material);
-
 			const {x, y, z, omega, phi, kappa} = params;
-			// const [rx, ry, rz] = [omega, phi, kappa]
-			// 	.map(THREE.Math.degToRad);
-			
-			// mesh.position.set(x, y, z);
-			// mesh.scale.set(width / height, 1, 1);
-			// mesh.rotation.set(rx, ry, rz);
-			// {
-			// 	mesh.updateMatrixWorld();
-			// 	const dir = mesh.getWorldDirection();
-			// 	const alpha = THREE.Math.degToRad(cameraParams.fov / 2);
-			// 	const d = -0.5 / Math.tan(alpha);
-			// 	const move = dir.clone().multiplyScalar(d);
-			// 	mesh.position.add(move);
-			// }
-			// sceneNode.add(mesh);
-
-			// const line = new THREE.Line(lg, lm);
-			// line.position.copy(mesh.position);
-			// line.scale.copy(mesh.scale);
-			// line.rotation.copy(mesh.rotation);
-			// sceneNode.add(line);
-
 			let orientedImage = new OrientedImage(params.id);
-			// orientedImage.setPosition(x, y, z);
-			// orientedImage.setRotation(omega, phi, kappa);
-			// orientedImage.setDimension(width, height);
 			let position = [x, y, z];
 			let rotation = [omega, phi, kappa];
 			let dimension = [width, height];
@@ -309,7 +268,7 @@ export class OrientedImageLoader{
 		let hoveredElement = null;
 		let clipVolume = null;
 		
-		let moveToAction = ()=>{};
+		let moveToAction = (image)=>{};
 
 		const onMouseMove = (evt) => {
 			const tStart = performance.now();
@@ -497,6 +456,7 @@ export class OrientedImageLoader{
 		//added these so that the external user has more control
 		images.moveToImage = moveToImage;
 		images.setMoveToAction = setMoveToAction;
+		images.setReleaseAction = orientedImageControls.setReleaseAction;
 
 		Potree.debug.moveToImage = moveToImage;
 
