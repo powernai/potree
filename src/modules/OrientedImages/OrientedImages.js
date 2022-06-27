@@ -308,6 +308,8 @@ export class OrientedImageLoader{
 
 		let hoveredElement = null;
 		let clipVolume = null;
+		
+		let moveToAction = ()=>{};
 
 		const onMouseMove = (evt) => {
 			const tStart = performance.now();
@@ -434,6 +436,13 @@ export class OrientedImageLoader{
 				
 
 			}
+			
+			moveToAction(image);
+		};
+		
+		//this was added by benjamin to allow the addition of scene triggers on moveto
+		const setMoveToAction = (action=()=>{}) => {
+			moveToAction = action;
 		};
 
 		const onMouseClick = (evt) => {
@@ -445,6 +454,7 @@ export class OrientedImageLoader{
 				moveToImage(hoveredElement);
 			}
 		};
+		
 		viewer.renderer.domElement.addEventListener( 'mousemove', onMouseMove, false );
 		viewer.renderer.domElement.addEventListener( 'mousedown', onMouseClick, false );
 
@@ -483,7 +493,10 @@ export class OrientedImageLoader{
 		images.cameraParams = cameraParams;
 		images.imageParams = imageParams;
 		images.images = orientedImages;
+		
+		//added these so that the external user has more control
 		images.moveToImage = moveToImage;
+		images.setMoveToAction = setMoveToAction;
 
 		Potree.debug.moveToImage = moveToImage;
 
