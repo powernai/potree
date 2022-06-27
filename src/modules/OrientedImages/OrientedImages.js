@@ -456,7 +456,11 @@ export class OrientedImageLoader{
 		//added these so that the external user has more control
 		images.moveToImage = moveToImage;
 		images.setMoveToAction = setMoveToAction;
-		images.setReleaseAction = orientedImageControls.setReleaseAction;
+		
+		//this is done in this format to maintain the scope of 'this' in in setReleaseAction
+		images.setReleaseAction = (action) => {
+			orientedImageControls.setReleaseAction(action);
+		};
 
 		Potree.debug.moveToImage = moveToImage;
 
