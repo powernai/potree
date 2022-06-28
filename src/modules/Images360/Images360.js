@@ -54,20 +54,20 @@ export class Images360 extends EventDispatcher{
 
 		this.focusedImage = null;
 
-		let elUnfocus = document.createElement("input");
-		elUnfocus.type = "button";
-		elUnfocus.value = "unfocus";
-		elUnfocus.style.position = "absolute";
-		elUnfocus.style.right = "10px";
-		elUnfocus.style.bottom = "10px";
-		elUnfocus.style.zIndex = "10000";
-		elUnfocus.style.fontSize = "2em";
-		elUnfocus.addEventListener("click", () => this.unfocus());
-		this.elUnfocus = elUnfocus;
-
-		this.domRoot = viewer.renderer.domElement.parentElement;
-		this.domRoot.appendChild(elUnfocus);
-		this.elUnfocus.style.display = "none";
+		// let elUnfocus = document.createElement("input");
+		// elUnfocus.type = "button";
+		// elUnfocus.value = "unfocus";
+		// elUnfocus.style.position = "absolute";
+		// elUnfocus.style.right = "10px";
+		// elUnfocus.style.bottom = "10px";
+		// elUnfocus.style.zIndex = "10000";
+		// elUnfocus.style.fontSize = "2em";
+		// elUnfocus.addEventListener("click", () => this.unfocus());
+		// this.elUnfocus = elUnfocus;
+		//
+		// this.domRoot = viewer.renderer.domElement.parentElement;
+		// this.domRoot.appendChild(elUnfocus);
+		// this.elUnfocus.style.display = "none";
 
 		viewer.addEventListener("update", () => {
 			this.update(viewer);
@@ -112,7 +112,7 @@ export class Images360 extends EventDispatcher{
 		previousView = {
 			controls: this.viewer.controls,
 			position: this.viewer.scene.view.position.clone(),
-			target: viewer.scene.view.getPivot(),
+			target: this.viewer.scene.view.getPivot(),
 		};
 
 		this.viewer.setControls(this.viewer.orbitControls);
@@ -145,11 +145,11 @@ export class Images360 extends EventDispatcher{
 		this.sphere.position.set(...image360.position);
 
 		let target = new THREE.Vector3(...image360.position);
-		let dir = target.clone().sub(viewer.scene.view.position).normalize();
+		let dir = target.clone().sub(this.viewer.scene.view.position).normalize();
 		let move = dir.multiplyScalar(0.000001);
 		let newCamPos = target.clone().sub(move);
 
-		viewer.scene.view.setView(
+		this.viewer.scene.view.setView(
 			newCamPos, 
 			target,
 			500
@@ -178,16 +178,16 @@ export class Images360 extends EventDispatcher{
 		this.sphere.material.needsUpdate = true;
 		this.sphere.visible = false;
 
-		let pos = viewer.scene.view.position;
-		let target = viewer.scene.view.getPivot();
+		let pos = this.viewer.scene.view.position;
+		let target = this.viewer.scene.view.getPivot();
 		let dir = target.clone().sub(pos).normalize();
 		let move = dir.multiplyScalar(10);
 		let newCamPos = target.clone().sub(move);
 
-		viewer.orbitControls.doubleClockZoomEnabled = true;
-		viewer.setControls(previousView.controls);
+		this.viewer.orbitControls.doubleClockZoomEnabled = true;
+		this.viewer.setControls(previousView.controls);
 
-		viewer.scene.view.setView(
+		this.viewer.scene.view.setView(
 			previousView.position, 
 			previousView.target,
 			500
@@ -211,7 +211,7 @@ export class Images360 extends EventDispatcher{
 
 	}
 
-	handleHovering(){
+	handleHovering(viewer){
 		let mouse = viewer.inputHandler.mouse;
 		let camera = viewer.scene.getActiveCamera();
 		let domElement = viewer.renderer.domElement;
@@ -247,7 +247,7 @@ export class Images360 extends EventDispatcher{
 		}
 
 		if(this.selectingEnabled){
-			this.handleHovering();
+			this.handleHovering(viewer);
 		}
 
 	}

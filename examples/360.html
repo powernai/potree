@@ -57,7 +57,7 @@
 		});
 		
 		// Load and add point cloud to scene
-		Potree.loadPointCloud("http://5.9.65.151/mschuetz/potree/resources/pointclouds/helimap/360/MLS_drive1/cloud.js", "MLS", e => {
+		Potree.loadPointCloud("https://s3.amazonaws.com/ai.powern.website.assets/cpms/INL/clouds/01_15_2021/cloud.js", "MLS", e => {
 			let scene = viewer.scene;
 			let pointcloud = e.pointcloud;
 			
@@ -70,19 +70,24 @@
 			
 			scene.addPointCloud(pointcloud);
 
+			// viewer.scene.view.setView(
+			// 	[2652381.103, 1249049.447, 411.636],
+			// 	[2652364.407, 1249077.205, 399.696],
+			// );
 			viewer.scene.view.setView(
-				[2652381.103, 1249049.447, 411.636],
-				[2652364.407, 1249077.205, 399.696],
+					[100,100,100],
+					[0,0,0],
 			);
 
 			run();
 		});
 
 		async function run(){
-
-			proj4.defs("WGS84", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
-			proj4.defs("pointcloud", viewer.getProjection());
-			let transform = proj4("WGS84", "pointcloud");
+			let transform = {
+				forward:(p) => {
+					return p;
+				}
+			};
 
 			let params = {
 				transform: transform
@@ -90,8 +95,10 @@
 
 			// this file contains coordinates, orientation and filenames of the images:
 			// http://5.9.65.151/mschuetz/potree/resources/pointclouds/helimap/360/Drive2_selection/coordinates.txt
-			Potree.Images360Loader.load("http://5.9.65.151/mschuetz/potree/resources/pointclouds/helimap/360/Drive2_selection", viewer, params).then( images => {
+			// https://s3.amazonaws.com/ai.powern.website.assets/cpms/FWH/360Slam/Coordinates/coordinates.txt
+			Potree.Images360Loader.load("https://s3.amazonaws.com/ai.powern.website.assets/cpms/FWH/360Slam/Coordinates", viewer, params).then( images => {
 				viewer.scene.add360Images(images);
+				images.focus(images.images[0]);
 			});
 
 			viewer.mapView.showSources(false);

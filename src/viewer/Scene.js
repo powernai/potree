@@ -166,12 +166,6 @@ export class Scene extends EventDispatcher{
 	add360Images(images){
 		this.images360.push(images);
 		this.scene.add(images.node);
-
-		this.dispatchEvent({
-			'type': '360_images_added',
-			'scene': this,
-			'images': images
-		});
 	}
 
 	remove360Images(images){
