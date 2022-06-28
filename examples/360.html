@@ -98,6 +98,7 @@
 			// https://s3.amazonaws.com/ai.powern.website.assets/cpms/FWH/360Slam/Coordinates/coordinates.txt
 			Potree.Images360Loader.load("https://s3.amazonaws.com/ai.powern.website.assets/cpms/FWH/360Slam/Coordinates", viewer, params).then( images => {
 				viewer.scene.add360Images(images);
+				images.focus(images.images[0]);
 			});
 
 			viewer.mapView.showSources(false);
