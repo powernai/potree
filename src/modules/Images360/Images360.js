@@ -105,9 +105,6 @@ export class Images360 extends EventDispatcher{
 	}
 
 	focus(image360){
-		if(this.focusedImage !== null){
-			this.unfocus();
-		}
 
 		previousView = {
 			controls: this.viewer.controls,
@@ -154,10 +151,6 @@ export class Images360 extends EventDispatcher{
 			target,
 			500
 		);
-
-		this.focusedImage = image360;
-
-		this.elUnfocus.style.display = "";
 	}
 
 	unfocus(){
