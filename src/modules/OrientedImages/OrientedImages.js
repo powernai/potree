@@ -117,7 +117,7 @@ export class OrientedImage{
 		line.rotation.copy(mesh.rotation);
 	}
 
-};
+}
 
 export class OrientedImages extends EventDispatcher{
 
@@ -151,9 +151,7 @@ export class OrientedImages extends EventDispatcher{
 	get visible(){
 		return this._visible;
 	}
-
-
-};
+}
 
 export class OrientedImageLoader{
 
@@ -295,7 +293,8 @@ export class OrientedImageLoader{
 			const intersects = raycaster.intersectObjects( objects );
 			let selectionChanged = false;
 
-			if ( intersects.length > 0){
+			//added images._visible to trigger that
+			if ( intersects.length > 0 && images._visible === true){
 				//console.log(intersects);
 				const intersection = intersects[0];
 				const orientedImage = intersection.object.orientedImage;
