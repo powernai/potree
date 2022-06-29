@@ -166,6 +166,14 @@ export class Scene extends EventDispatcher{
 	add360Images(images){
 		this.images360.push(images);
 		this.scene.add(images.node);
+
+		// This event creating some transformation errors with cpms.
+		// This is commented out by Varun Veginati, since we don't require this functionality in cpms.
+		// this.dispatchEvent({
+		// 	'type': '360_images_added',
+		// 	'scene': this,
+		// 	'images': images
+		// });
 	}
 
 	remove360Images(images){
