@@ -33,6 +33,9 @@ class Image360{
 	}
 };
 
+// This is file is updated by Varun Veginati. 
+// "viewer" is updated with "this.viewer" since when used in cpms it can't recognise what is viewer.
+// To view the changes check this pull request -> https://github.com/powernai/potree/pull/1/files
 export class Images360 extends EventDispatcher{
 
 	constructor(viewer){
@@ -54,6 +57,7 @@ export class Images360 extends EventDispatcher{
 
 		this.focusedImage = null;
 
+		//this is commented out by Varun Veginati to disable unfocus functionality in 360Images.
 		// let elUnfocus = document.createElement("input");
 		// elUnfocus.type = "button";
 		// elUnfocus.value = "unfocus";
@@ -105,6 +109,10 @@ export class Images360 extends EventDispatcher{
 	}
 
 	focus(image360){
+		//this is commented out by Varun Veginati to disable unfocus functionality in 360Images.
+		// if(this.focusedImage !== null){
+		// 	this.unfocus();
+		// }
 
 		previousView = {
 			controls: this.viewer.controls,
@@ -120,8 +128,8 @@ export class Images360 extends EventDispatcher{
 		}
 
 		this.selectingEnabled = false;
-
-		this.sphere.visible = false;
+		//this is commented so that the screen doesn't go blank when navigated to the new image. 
+		// this.sphere.visible = false;
 
 		this.load(image360).then( () => {
 			this.sphere.visible = true;
@@ -151,6 +159,11 @@ export class Images360 extends EventDispatcher{
 			target,
 			500
 		);
+
+		//this is commented out by Varun Veginati to disable unfocus functionality in 360Images.
+		// this.focusedImage = image360;
+		//
+		// this.elUnfocus.style.display = "";
 	}
 
 	unfocus(){
