@@ -126,8 +126,7 @@ export class Images360 extends EventDispatcher{
 		}
 
 		this.selectingEnabled = false;
-		//this is commented so that the screen doesn't go blank when navigated to the new image. 
-		// this.sphere.visible = false;
+		this.sphere.visible = false;
 
 		this.load(image360).then( () => {
 			this.sphere.visible = true;
@@ -268,23 +267,18 @@ export class Images360Loader{
 			};
 		}
 		
-		let response = await fetch(`${url}/coordinates.txt`);
-		let text = await response.text();
+		// updated by Varun Veginati. This update is to use coordinates file in json format instead of txt file.
+		let response = await fetch(`${url}/coordinates.json`);
+		let data = await response.json();
 
-		let lines = text.split(/\r?\n/);
-		let coordinateLines = lines.slice(1);
+		let lines = data.coordinates;
+		// let coordinateLines = lines.slice(1);
 
 		let images360 = new Images360(viewer);
 
-		for(let line of coordinateLines){
+		for(let line of lines){
 
-			if(line.trim().length === 0){
-				continue;
-			}
-
-			let tokens = line.split(/\t/);
-
-			let [filename, time, long, lat, alt, course, pitch, roll] = tokens;
+			let [filename, time, long, lat, alt, course, pitch, roll] = line;
 			time = parseFloat(time);
 			long = parseFloat(long);
 			lat = parseFloat(lat);
