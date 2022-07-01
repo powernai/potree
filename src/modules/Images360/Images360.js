@@ -41,6 +41,8 @@ export class Images360 extends EventDispatcher{
 	constructor(viewer){
 		super();
 
+		this.foucusAction = (image)=>{};
+		this.unfocusAction = (image)=>{};
 		this.viewer = viewer;
 
 		this.selectingEnabled = true;
@@ -160,6 +162,8 @@ export class Images360 extends EventDispatcher{
 		this.focusedImage = image360;
 
 		this.elUnfocus.style.display = "";
+		
+		this.foucusAction(image360);
 	}
 
 	unfocus(){
@@ -199,6 +203,16 @@ export class Images360 extends EventDispatcher{
 		this.focusedImage = null;
 
 		this.elUnfocus.style.display = "none";
+		
+		this.unfocusAction(image);
+	}
+	
+	setFoucusAction(action=(image)=>{}) {
+		this.foucusAction = action;
+	}
+	
+	setUnfocusAction(action=()=>{}) {
+		this.unfocusAction = action;
 	}
 
 	load(image360){
@@ -333,9 +347,6 @@ export class Images360Loader{
 			image360.mesh = mesh;
 		}
 	}
-
-	
-
-};
+}
 
 
