@@ -207,7 +207,7 @@ export class Images360 extends EventDispatcher{
 		this.unfocusAction(image);
 	}
 	
-	setFoucusAction(action=(image)=>{}) {
+	setFocusAction(action=(image)=>{}) {
 		this.foucusAction = action;
 	}
 	
