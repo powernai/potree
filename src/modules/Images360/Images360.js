@@ -85,7 +85,7 @@ export class Images360 extends EventDispatcher{
 			}
 		});
 		
-	};
+	}
 
 	set visible(visible){
 		if(this._visible === visible){
