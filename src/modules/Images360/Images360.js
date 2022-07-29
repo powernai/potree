@@ -41,7 +41,7 @@ export class Images360 extends EventDispatcher{
 	constructor(viewer){
 		super();
 
-		this.foucusAction = (image)=>{};
+		this.focusAction = (image)=>{};
 		this.unfocusAction = (image)=>{};
 		this.viewer = viewer;
 
@@ -163,7 +163,7 @@ export class Images360 extends EventDispatcher{
 
 		this.elUnfocus.style.display = "";
 		
-		this.foucusAction(image360);
+		this.focusAction(image360);
 	}
 
 	unfocus(){
@@ -207,8 +207,8 @@ export class Images360 extends EventDispatcher{
 		this.unfocusAction(image);
 	}
 	
-	setFoucusAction(action=(image)=>{}) {
-		this.foucusAction = action;
+	setFocusAction(action=(image)=>{}) {
+		this.focusAction = action;
 	}
 	
 	setUnfocusAction(action=()=>{}) {
