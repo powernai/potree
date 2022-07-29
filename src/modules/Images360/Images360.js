@@ -155,7 +155,7 @@ export class Images360 extends EventDispatcher{
 
 		this.viewer.scene.view.setView(
 			newCamPos, 
-			target,
+			newCamPos, // this change is done to not update the look at vector when switched from old to new image. Updated by Varun Veginati
 			500
 		);
 
