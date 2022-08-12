@@ -1,6 +1,5 @@
 {
-  "name": "potree",
-  "private": true,
+  "name": "potree-powern",
   "version": "1.8.0",
   "description": "WebGL point cloud viewer",
   "keywords": [

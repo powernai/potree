@@ -26,6 +26,7 @@ export class Scene extends EventDispatcher{
 		this.cameraMode = CameraMode.PERSPECTIVE;
 		this.overrideCamera = null;
 		this.pointclouds = [];
+		this.bims = [];
 
 		this.measurements = [];
 		this.profiles = [];
@@ -129,6 +130,30 @@ export class Scene extends EventDispatcher{
 			pointcloud: pointcloud
 		});
 	}
+	
+	addBim(bim) {
+		this.scene.add(bim);
+		this.bims.push(bim);
+		
+		this.dispatchEvent({
+			'type': 'bim_added',
+			'scene': this,
+			'bim': bim,
+		});
+	}
+	
+	removeBim(bim) {
+		let index = this.bims.indexOf(bim);
+		if (index > -1) {
+			this.bims.splice(index, 1);
+
+			this.dispatchEvent({
+				'type': 'bim_removed',
+				'scene': this,
+				'bim': bim,
+			});
+		}
+	}
 
 	addVolume (volume) {
 		this.volumes.push(volume);
@@ -166,14 +191,12 @@ export class Scene extends EventDispatcher{
 	add360Images(images){
 		this.images360.push(images);
 		this.scene.add(images.node);
-
-		// This event creating some transformation errors with cpms.
-		// This is commented out by Varun Veginati, since we don't require this functionality in cpms.
-		// this.dispatchEvent({
-		// 	'type': '360_images_added',
-		// 	'scene': this,
-		// 	'images': images
-		// });
+	
+		this.dispatchEvent({
+		 	'type': '360_images_added',
+		 	'scene': this,
+		 	'images': images
+		});
 	}
 
 	remove360Images(images){
