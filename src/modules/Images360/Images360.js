@@ -41,7 +41,7 @@ export class Images360 extends EventDispatcher{
 	constructor(viewer){
 		super();
 
-		this.foucusAction = (image)=>{};
+		this.focusAction = (image)=>{};
 		this.unfocusAction = (image)=>{};
 		this.viewer = viewer;
 
@@ -155,7 +155,7 @@ export class Images360 extends EventDispatcher{
 
 		this.viewer.scene.view.setView(
 			newCamPos, 
-			target,
+			newCamPos, // this change is done to not update the look at vector when switched from old to new image. Updated by Varun Veginati
 			500
 		);
 
@@ -163,7 +163,7 @@ export class Images360 extends EventDispatcher{
 
 		this.elUnfocus.style.display = "";
 		
-		this.foucusAction(image360);
+		this.focusAction(image360);
 	}
 
 	unfocus(){
@@ -208,7 +208,11 @@ export class Images360 extends EventDispatcher{
 	}
 	
 	setFocusAction(action=(image)=>{}) {
+<<<<<<< HEAD
 		this.foucusAction = action;
+=======
+		this.focusAction = action;
+>>>>>>> 1127c74e5502fbdb4838777a82c44aa003df7743
 	}
 	
 	setUnfocusAction(action=()=>{}) {

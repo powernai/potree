@@ -96,7 +96,7 @@
 			// this file contains coordinates, orientation and filenames of the images:
 			// http://5.9.65.151/mschuetz/potree/resources/pointclouds/helimap/360/Drive2_selection/coordinates.txt
 			// https://s3.amazonaws.com/ai.powern.website.assets/cpms/FWH/360Slam/Coordinates/coordinates.txt
-			Potree.Images360Loader.load("https://s3.amazonaws.com/ai.powern.website.assets/cpms/FWH/360Slam/Coordinates", viewer, params).then( images => {
+			Potree.Images360Loader.load("https://s3.amazonaws.com/ai.powern.website.assets/cpms/FWH/360Slam/01_15_2021/Coordinates", viewer, params).then( images => {
 				viewer.scene.add360Images(images);
 				images.focus(images.images[0]);
 			});
