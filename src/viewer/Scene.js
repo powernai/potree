@@ -131,9 +131,20 @@ export class Scene extends EventDispatcher{
 		});
 	}
 	
+	/**
+	 * this was added by benjamin lewis
+	 * these are designed only to work with Bim.js from powern/cpms-web
+	 */
 	addBim(bim) {
-		this.scene.add(bim);
+		if (!bim.isBim) {
+			return -1;
+		}
+		
 		this.bims.push(bim);
+		
+		Object.keys(bim.ifcManager.subsets.subsets).forEach((key)=>{
+            this.scene.add(bim.ifcManager.subsets.subsets[key].mesh);
+        });
 		
 		this.dispatchEvent({
 			'type': 'bim_added',
@@ -142,10 +153,22 @@ export class Scene extends EventDispatcher{
 		});
 	}
 	
+	/**
+	 * this was added by benjamin lewis
+	 * these are designed only to work with Bim.js from powern/cpms-web
+	 */
 	removeBim(bim) {
+		if (!bim.isBim) {
+			return -1;
+		}
+		
 		let index = this.bims.indexOf(bim);
 		if (index > -1) {
 			this.bims.splice(index, 1);
+			
+			Object.keys(bim.ifcManager.subsets.subsets).forEach((key)=>{
+		        this.scene.remove(bim.ifcManager.subsets.subsets[key].mesh);
+		    });
 
 			this.dispatchEvent({
 				'type': 'bim_removed',
