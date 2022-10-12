@@ -142,9 +142,9 @@ export class Scene extends EventDispatcher{
 		
 		this.bims.push(bim);
 		
-		Object.keys(bim.ifcManager.subsets.subsets).forEach((key)=>{
-            this.scene.add(bim.ifcManager.subsets.subsets[key].mesh);
-        });
+		bim.subsets.forEach((subset)=>{
+			this.scene.add(subset);	
+		});
 		
 		this.dispatchEvent({
 			'type': 'bim_added',
@@ -166,9 +166,9 @@ export class Scene extends EventDispatcher{
 		if (index > -1) {
 			this.bims.splice(index, 1);
 			
-			Object.keys(bim.ifcManager.subsets.subsets).forEach((key)=>{
-		        this.scene.remove(bim.ifcManager.subsets.subsets[key].mesh);
-		    });
+			bim.subsets.forEach((subset)=>{
+				this.scene.remove(subset);
+			});
 
 			this.dispatchEvent({
 				'type': 'bim_removed',
