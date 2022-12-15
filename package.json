@@ -1,6 +1,6 @@
 {
   "name": "potree-powern",
-  "version": "1.8.0",
+  "version": "1.8.12",
   "description": "WebGL point cloud viewer",
   "keywords": [
     "point",
@@ -17,8 +17,7 @@
   "main": "./build/potree/potree.js",
   "scripts": {
     "start": "gulp watch",
-    "build": "gulp build pack",
-    "postinstall": "npm run build"
+    "build": "gulp build pack"
   },
   "dependencies": {
     "gulp": "^4.0.2",
@@ -28,6 +27,9 @@
     "rollup": "^1.31.1",
     "through": "~2.3.4"
   },
+  "files": [
+    "build"
+  ],
   "author": "Markus Schütz",
   "license": "BSD-2-CLAUSE"
 }
