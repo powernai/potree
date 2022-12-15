@@ -1,6 +1,6 @@
 {
   "name": "potree-powern",
-  "version": "1.8.14",
+  "version": "1.8.15",
   "description": "WebGL point cloud viewer",
   "keywords": [
     "point",
@@ -28,7 +28,8 @@
     "through": "~2.3.4"
   },
   "files": [
-    "build"
+    "build",
+    "libs"
   ],
   "author": "Markus Schütz",
   "license": "BSD-2-CLAUSE"

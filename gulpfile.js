@@ -57,7 +57,19 @@ let workers = {
 // we package them together with potree
 let lazyLibs = {
 	"geopackage": "libs/geopackage",
-	"sql.js": "libs/sql.js"
+	"sql.js": "libs/sql.js",
+ // "jquery": "libs/jquery/jquery-3.1.1.min.js",
+ //   "spectrum": "libs/spectrum/spectrum.js",
+ //   "jquery-ui": "libs/jquery-ui/jquery-ui.min.js",
+ //   "three.js": "libs/three.interaction.0.2.3.js",
+ //   "BinaryHeap": "libs/other/BinaryHeap.js",
+ //   "tween": "libs/tween/tween.min.js",
+ //   "d3": "libs/d3/d3.js",
+ //   "proj4": "libs/proj4/proj4.js",
+ //   "openlayers3": "libs/openlayers3/ol.js",
+ //   "i18next": "libs/i18next/i18next.js",
+ //   "jstree": "libs/jstree/jstree.js",
+ //   "plasio": "libs/plasio/js/laslaz.js"
 };
 
 let shaders = [
@@ -96,12 +108,6 @@ gulp.task('icons_viewer', async function(done) {
 	await createIconsPage();
 
 	done();
-
-});
-
-gulp.task('test', async function() {
-
-	console.log("asdfiae8ofh");
 
 });
 
