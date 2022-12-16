@@ -15,6 +15,15 @@ us from bitrot as they get updated.
 import {Utils} from "./utils.js";
 import * as url from "url";
 
+//This is used to resolve the url polyfil utility issue. Node has it avalable for
+//use if decalred. potree runs an older version of node? (node v4) Which allows
+//automatic polyfil which when used in an npm import this does not exist. Rather
+//then add all the dependencies for polyfil and a webpack config I just import it
+//here and add it to window so that no code needed to be changed.
+//this is the url npm package which is used. Supposidly it should work as a
+//replacement for node's url tool.
+window.url = url;
+
 //These are the current dependencies at the time of writing this code. 12/16/2022
 const libs = [
     "jquery/jquery-3.1.1.min.js",
@@ -43,6 +52,9 @@ const libs = [
 //     "../libs/jstree/themes/mixed/style.css"
 // ];
 
+//Potree has not yet been initialized here which is how this would typically be
+//done but we can get the script path like this. And use it for loading the lib
+//scripts
 let scriptPath = "";
 
 if (document.currentScript && document.currentScript.src) {
@@ -66,13 +78,3 @@ libs.forEach((src)=>{
     //scripts will only be ran once.
     Utils.loadScript(`${scriptPath}/lazylibs/${src}`);
 });
-
-
-//This is used to resolve the url polyfil utility issue. Node has it avalable for
-//use if decalred. potree runs an older version of node? (node v4) Which allows
-//automatic polyfil which when used in an npm import this does not exist. Rather
-//then add all the dependencies for polyfil and a webpack config I just import it
-//here and add it to window so that no code needed to be changed.
-//this is the url npm package which is used. Supposidly it should work as a
-//replacement for node's url tool.
-window.url = url;
