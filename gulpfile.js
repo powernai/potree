@@ -63,7 +63,7 @@ let lazyLibs = {
     "spectrum": "libs/spectrum",
     "jquery-ui": "libs/jquery-ui",
     "three.js": "libs/three.js",
-    "BinaryHeap": "libs/other/BinaryHeap.js",
+    "other": "libs/other", //who in their right mind does other?
     "tween": "libs/tween",
     "d3": "libs/d3",
     "proj4": "libs/proj4",
@@ -165,9 +165,14 @@ gulp.task("shaders", async function(){
 	fs.writeFileSync(targetPath, content, {flag: "w"});
 });
 
+gulp.task("index", async function(done) {
+	gulp.src([`index.js`]).pipe(gulp.dest(`build`));
+	done();
+});
+
 gulp.task('build', 
 	gulp.series(
-		gulp.parallel("workers", "lazylibs", "shaders", "icons_viewer", "examples_page"),
+		gulp.parallel("index", "workers", "lazylibs", "shaders", "icons_viewer", "examples_page"),
 		async function(done){
 			gulp.src(paths.html).pipe(gulp.dest('build/potree'));
 
