@@ -1,6 +1,6 @@
 {
   "name": "potree-powern",
-  "version": "1.8.22",
+  "version": "1.8.27",
   "description": "WebGL point cloud viewer",
   "keywords": [
     "point",
@@ -14,7 +14,7 @@
     "browser",
     "tool"
   ],
-  "main": "./build/potree/potree.js",
+  "main": "./build/index.js",
   "scripts": {
     "start": "gulp watch",
     "build": "gulp build pack"
@@ -30,7 +30,9 @@
   },
   "files": [
     "build",
-    "libs"
+    "package.json",
+    "README.md",
+    "LICENSE"
   ],
   "author": "Markus Schütz",
   "license": "BSD-2-CLAUSE"
