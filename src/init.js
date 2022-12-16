@@ -1,30 +1,50 @@
 /*
-this is to make sure that potree has all its lib dependencies that it needs when it is imported. It attaches itself to the html and then its ran attaching all the potree needs to window.
-This was done so that it could be handled as an npm package and imported in a nice clear way.
-    -Benjamin lewis
+There were a few modifications that I needed to make in order to allow potree to
+exist as an npm package. However all the needed imports can be found here.
+potree refferences a physically downloaded and <script> imported library. Due to
+this I was unsure if using the more modern version of the library would be a good
+idea since I would need to maintain it and because I would need to modify all the
+code to use "import" or globally init all its props to window. Which might have caused.
+key dependencies to be missed. As a result I decided to attach the libs
+that are expected for download to the lazyLibs in the gulp. They 
+can be refferenced here. That way any updates to dependencies must be handled by
+the original creator and not me. We also have coppies of the lib which protects
+us from bitrot as they get updated.
+    -Benjamin lewis (lewibs)
 */
-// const libs = [
-//     "../libs/jquery/jquery-3.1.1.min.js",
-//     "../libs/spectrum/spectrum.js",
-//     "../libs/jquery-ui/jquery-ui.min.js",
-//     "../libs/three.interaction.0.2.3.js",
-//     "../libs/other/BinaryHeap.js",
-//     "../libs/tween/tween.min.js",
-//     "../libs/d3/d3.js",
-//     "../libs/proj4/proj4.js",
-//     "../libs/openlayers3/ol.js",
-//     "../libs/i18next/i18next.js",
-//     "../libs/jstree/jstree.js",
-//     "../libs/plasio/js/laslaz.js",
-// ];
-// // const styles = [
-// //     "../libs/potree/potree.css",
-// //     "../libs/jquery-ui/jquery-ui.min.css",
-// //     "../libs/openlayers3/ol.css",
-// //     "../libs/spectrum/spectrum.css",
-// //     "../libs/jstree/themes/mixed/style.css"
-// // ];
+import {Utils} from "./utils.js";
 
-// libs.forEach((src)=>{
-//     console.log(require(src));
-// });
+//These are the current dependencies at the time of writing this code. 12/16/2022
+const libs = [
+    "jquery/jquery-3.1.1.min.js",
+    "spectrum/spectrum.js",
+    "jquery-ui/jquery-ui.min.js",
+    "three.interaction.0.2.3.js",
+    "other/BinaryHeap.js",
+    "tween/tween.min.js",
+    "d3/d3.js",
+    "proj4/proj4.js",
+    "openlayers3/ol.js",
+    "i18next/i18next.js",
+    "jstree/jstree.js",
+    "plasio/js/laslaz.js",
+];
+
+//I chose to ignore styles since cpms should not be using potree tools directly 
+//through their ui interface since it goes against our styles and code.
+//It also was just something I didnt want to deal with.
+
+// const styles = [
+//     "../libs/potree/potree.css",
+//     "../libs/jquery-ui/jquery-ui.min.css",
+//     "../libs/openlayers3/ol.css",
+//     "../libs/spectrum/spectrum.css",
+//     "../libs/jstree/themes/mixed/style.css"
+// ];
+
+libs.forEach((src)=>{
+    //loadScript tasks a link to a js script and injects it into the head
+    //of the main html. Because a potree import will only be ran once these
+    //scripts will only be ran once.
+    Utils.loadScript(`${Potree.scriptPath}/lazylibs/${src}`)
+});

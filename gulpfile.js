@@ -58,18 +58,18 @@ let workers = {
 let lazyLibs = {
 	"geopackage": "libs/geopackage",
 	"sql.js": "libs/sql.js",
- // "jquery": "libs/jquery/jquery-3.1.1.min.js",
- //   "spectrum": "libs/spectrum/spectrum.js",
- //   "jquery-ui": "libs/jquery-ui/jquery-ui.min.js",
- //   "three.js": "libs/three.interaction.0.2.3.js",
- //   "BinaryHeap": "libs/other/BinaryHeap.js",
- //   "tween": "libs/tween/tween.min.js",
- //   "d3": "libs/d3/d3.js",
- //   "proj4": "libs/proj4/proj4.js",
- //   "openlayers3": "libs/openlayers3/ol.js",
- //   "i18next": "libs/i18next/i18next.js",
- //   "jstree": "libs/jstree/jstree.js",
- //   "plasio": "libs/plasio/js/laslaz.js"
+	"jquery": "libs/jquery",
+    "spectrum": "libs/spectrum",
+    "jquery-ui": "libs/jquery-ui",
+    "three.js": "libs/three.js",
+    "BinaryHeap": "libs/other/BinaryHeap.js",
+    "tween": "libs/tween",
+    "d3": "libs/d3",
+    "proj4": "libs/proj4",
+    "openlayers3": "libs/openlayers3",
+    "i18next": "libs/i18next",
+    "jstree": "libs/jstree",
+    "plasio": "libs/plasio"
 };
 
 let shaders = [
@@ -128,7 +128,7 @@ gulp.task("lazylibs", async function(done){
 	for(let libname of Object.keys(lazyLibs)){
 
 		const libpath = lazyLibs[libname];
-
+		
 		gulp.src([`${libpath}/**/*`])
 			.pipe(gulp.dest(`build/potree/lazylibs/${libname}`));
 	}
