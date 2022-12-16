@@ -48,3 +48,11 @@ libs.forEach((src)=>{
     //scripts will only be ran once.
     Utils.loadScript(`${Potree.scriptPath}/lazylibs/${src}`)
 });
+
+
+//This is used to resolve the url polyfil utility issue. Node has it avalable for
+//use if decalred. potree runs an older version of node? (node v4) Which allows
+//automatic polyfil which when used in an npm import this does not exist. Rather
+//then add all the dependencies for polyfil and a webpack config I just import it
+//here and add it to window so that no code needed to be changed.
+window.url = require('url');

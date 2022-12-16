@@ -58,6 +58,7 @@ let workers = {
 let lazyLibs = {
 	"geopackage": "libs/geopackage",
 	"sql.js": "libs/sql.js",
+	//I added these. Read init.js for questions -lewibs
 	"jquery": "libs/jquery",
     "spectrum": "libs/spectrum",
     "jquery-ui": "libs/jquery-ui",
