@@ -13,6 +13,7 @@ us from bitrot as they get updated.
     -Benjamin lewis (lewibs)
 */
 import {Utils} from "./utils.js";
+import * as url from "url";
 
 //These are the current dependencies at the time of writing this code. 12/16/2022
 const libs = [
@@ -55,4 +56,6 @@ libs.forEach((src)=>{
 //automatic polyfil which when used in an npm import this does not exist. Rather
 //then add all the dependencies for polyfil and a webpack config I just import it
 //here and add it to window so that no code needed to be changed.
-window.url = require('url');
+//this is the url npm package which is used. Supposidly it should work as a
+//replacement for node's url tool.
+window.url = url;
