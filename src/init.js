@@ -12,9 +12,7 @@ the original creator and not me. We also have coppies of the lib which protects
 us from bitrot as they get updated.
     -Benjamin lewis (lewibs)
 */
-import {Utils} from "./utils.js";
-import * as url from "url";
-
+    
 //This is used to resolve the url polyfil utility issue. Node has it avalable for
 //use if decalred. potree runs an older version of node? (node v4) Which allows
 //automatic polyfil which when used in an npm import this does not exist. Rather
@@ -22,6 +20,7 @@ import * as url from "url";
 //here and add it to window so that no code needed to be changed.
 //this is the url npm package which is used. Supposidly it should work as a
 //replacement for node's url tool.
+import * as url from "url";
 window.url = url;
 
 //These are the current dependencies at the time of writing this code. 12/16/2022
@@ -55,26 +54,38 @@ const libs = [
 //Potree has not yet been initialized here which is how this would typically be
 //done but we can get the script path like this. And use it for loading the lib
 //scripts
-let scriptPath = "";
-
-if (document.currentScript && document.currentScript.src) {
-	scriptPath = new URL(document.currentScript.src + '/..').href;
-	if (scriptPath.slice(-1) === '/') {
-		scriptPath = scriptPath.slice(0, -1);
-	}
-} else if(import.meta){
-	scriptPath = new URL(import.meta.url + "/..").href;
-	if (scriptPath.slice(-1) === '/') {
-		scriptPath = scriptPath.slice(0, -1);
-	}
-}else {
-	console.error('Potree was unable to find its script path using document.currentScript. Is Potree included with a script tag? Does your browser support this function?');
+function scriptPath() {
+    let path = "";
+    if (document.currentScript && document.currentScript.src) {
+        path = new URL(document.currentScript.src + '/..').href;
+        if (path.slice(-1) === '/') {
+        	path = path.slice(0, -1);
+        }
+    } else if (import.meta) {
+        path = new URL(import.meta.url + "/..").href;
+        if (path.slice(-1) === '/') {
+        	path = path.slice(0, -1);
+        }
+    } else {
+        console.error('Potree was unable to find its script path using document.currentScript. Is Potree included with a script tag? Does your browser support this function?');
+    }
+    return path;
 }
 
-console.log(scriptPath);
+//This takes the url to the script and makes it a script tag in the main code.
+//should work with lazy libs
+function loadScript(url) {
+    const element = document.getElementById(url);
+    
+    if (!element) { //if the script has not yet been run we add it
+        const script = document.createElement("script");
+        script.id = url;
+        script.src = url;
+        document.body.appendChild(script);
+    }
+}
+
+const path = scriptPath();
 libs.forEach((src)=>{
-    //loadScript tasks a link to a js script and injects it into the head
-    //of the main html. Because a potree import will only be ran once these
-    //scripts will only be ran once.
-    Utils.loadScript(`${scriptPath}/lazylibs/${src}`);
+    loadScript(`${path}/lazylibs/${src}`);
 });
