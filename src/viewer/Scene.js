@@ -130,53 +130,6 @@ export class Scene extends EventDispatcher{
 			pointcloud: pointcloud
 		});
 	}
-	
-	/**
-	 * this was added by benjamin lewis
-	 * these are designed only to work with Bim.js from powern/cpms-web
-	 */
-	addBim(bim) {
-		if (!bim.isBim) {
-			return -1;
-		}
-		
-		this.bims.push(bim);
-		
-		bim.subsets.forEach((subset)=>{
-			this.scene.add(subset);	
-		});
-		
-		this.dispatchEvent({
-			'type': 'bim_added',
-			'scene': this,
-			'bim': bim,
-		});
-	}
-	
-	/**
-	 * this was added by benjamin lewis
-	 * these are designed only to work with Bim.js from powern/cpms-web
-	 */
-	removeBim(bim) {
-		if (!bim.isBim) {
-			return -1;
-		}
-		
-		let index = this.bims.indexOf(bim);
-		if (index > -1) {
-			this.bims.splice(index, 1);
-			
-			bim.subsets.forEach((subset)=>{
-				this.scene.remove(subset);
-			});
-
-			this.dispatchEvent({
-				'type': 'bim_removed',
-				'scene': this,
-				'bim': bim,
-			});
-		}
-	}
 
 	addVolume (volume) {
 		this.volumes.push(volume);
