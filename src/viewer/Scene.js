@@ -26,7 +26,6 @@ export class Scene extends EventDispatcher{
 		this.cameraMode = CameraMode.PERSPECTIVE;
 		this.overrideCamera = null;
 		this.pointclouds = [];
-		this.bims = [];
 
 		this.measurements = [];
 		this.profiles = [];
