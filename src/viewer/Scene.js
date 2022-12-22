@@ -17,7 +17,6 @@ export class Scene extends EventDispatcher{
 		this.scene = new THREE.Scene();
 		this.sceneBG = new THREE.Scene();
 		this.scenePointCloud = new THREE.Scene();
-		this.meshScene = new THREE.Scene();
 
 		this.cameraP = new THREE.PerspectiveCamera(this.fov, 1, 0.1, 1000*1000);
 		this.cameraO = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000*1000);
@@ -390,13 +389,6 @@ export class Scene extends EventDispatcher{
 			bg.material.depthTest = false;
 			bg.material.depthWrite = false;
 			this.sceneBG.add(bg);
-		}
-		
-		{//mesh scene
-			this.scene.add(this.meshScene);
-			this.meshScene.rotation.x = Math.PI / 2;
-			this.meshScene.scale.set(0.305, 0.305, 0.305, 0.305);
-			this.meshScene.name = "meshScene";
 		}
 
 		// { // lights

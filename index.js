@@ -39,6 +39,7 @@ us from bitrot as they get updated.
 //     "./potree/lazylibs/i18next/i18next.js",
 //     "./potree/lazylibs/jstree/jstree.js",
 //     "./potree/lazylibs/plasio/js/laslaz.js",
+//     "./potree/lazylibs/three.js/three.module.js";
 //     "./potree/potree.js"
 // ];
 
