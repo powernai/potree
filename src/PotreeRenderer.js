@@ -543,7 +543,6 @@ class WebGLBuffer {
 export class Renderer {
 
 	constructor(threeRenderer) {
-		console.error('test');
 		this.threeRenderer = threeRenderer;
 		this.gl = this.threeRenderer.getContext();
 
