@@ -543,6 +543,7 @@ class WebGLBuffer {
 export class Renderer {
 
 	constructor(threeRenderer) {
+		console.error('test');
 		this.threeRenderer = threeRenderer;
 		this.gl = this.threeRenderer.getContext();
 
@@ -555,8 +556,30 @@ export class Renderer {
 		this.glTypeMapping.set(Uint8Array, this.gl.UNSIGNED_BYTE);
 		this.glTypeMapping.set(Uint16Array, this.gl.UNSIGNED_SHORT);
 
+		//Added by benjamin so that we can have actions
+		this.actions = [];
+
 		this.toggle = 0;
 	}
+
+		/**
+		 * this is used to add a new action to the renderer
+		 * @param {Function} func a function which takes no inputs and returns no values. It is simply an action which will be provoked on each rerender.
+		 * This is so that the user is able to add highly reapeated actions which will occur efficently. This would be something like a raycaster.
+		 * @author Benjamin Lewis <Benjamin.lewis@powern.ai>
+		 */
+		addAction(func) {
+			this.actions.push(func);
+		}
+	
+		/**
+		 * this is used to remove an action from the list of actions
+		 * @param {Function} func the action to be removed.
+		 * @author Benjamin Lewis <Benjamin.lewis@powern.ai>
+		 */
+		removeAction(func) {
+			this.actions = this.actions.filter((action)=>action!==func);
+		}
 
 	deleteBuffer(geometry) {
 
@@ -1452,6 +1475,11 @@ export class Renderer {
 
 		const traversalResult = this.traverse(scene);
 
+		//ACTIONS
+		// This was added by benjamin lewis to call all of the actions on each rerender
+		for (let i = 0; i < this.actions.length; i++) {
+			this.actions[i]();
+		}
 
 		// RENDER
 		for (const octree of traversalResult.octrees) {

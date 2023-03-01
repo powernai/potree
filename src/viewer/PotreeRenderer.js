@@ -1,7 +1,7 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
 
-
+//I dont think this is used ???
 export class PotreeRenderer {
 
 	constructor (viewer) {
