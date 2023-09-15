@@ -85,6 +85,11 @@ import {EptLoader} from "./loader/EptLoader.js";
 import {PointCloudOctree} from "./PointCloudOctree.js";
 import {WorkerPool} from "./WorkerPool.js";
 
+//NEED TO SHOW THREE to the user of this package to create three ports for
+//linking the threejs that potree uses and the one that cpms uses
+import * as THREE_IMPORT from "../libs/three.js/build/three.module.js";
+export const THREE = THREE_IMPORT;
+
 export const workerPool = new WorkerPool();
 
 export const version = {
