@@ -176,6 +176,7 @@ export class Scene extends EventDispatcher{
 
 	remove360Images(images){
 		let index = this.images360.indexOf(images);
+		this.scene.remove(images.node);
 		if (index > -1) {
 			this.images360.splice(index, 1);
 
