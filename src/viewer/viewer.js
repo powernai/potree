@@ -959,7 +959,7 @@ export class Viewer extends EventDispatcher{
 
 	zoomTo(node, factor, animationDuration = 0){
 		for (let scissorIdx = 0; scissorIdx < this.scissorZones.length; scissorIdx++) {
-			let viewHolder = this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx.viewIdxInScene]];
+			let viewHolder = this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx].viewIdxInScene];
 			let view = viewHolder.view;
 
 			let camera = viewHolder.cameraP.clone();
@@ -1086,16 +1086,16 @@ export class Viewer extends EventDispatcher{
 		if(!view) return;
 
 		switch(view) {
-			case "F":
+			case "South":
 				this.setFrontView(box);
 				break;
-			case "B":
+			case "North":
 				this.setBackView(box);
 				break;
-			case "L":
+			case "West":
 				this.setLeftView(box);
 				break;
-			case "R":
+			case "East":
 				this.setRightView(box);
 				break;
 			case "U":
@@ -1108,43 +1108,43 @@ export class Viewer extends EventDispatcher{
 	}
 	
 	setTopView(box){
-		this.scene.view.yaw = 0;
-		this.scene.view.pitch = -Math.PI / 2;
+		this.getView(0).yaw = 0;
+		this.getView(0).pitch = -Math.PI / 2;
 
 		this.fitToScreen(box);
 	};
 	
 	setBottomView(box){
-		this.scene.view.yaw = -Math.PI;
-		this.scene.view.pitch = Math.PI / 2;
+		this.getView(0).yaw = -Math.PI;
+		this.getView(0).pitch = Math.PI / 2;
 		
 		this.fitToScreen(box);
 	};
 
 	setFrontView(box){
-		this.scene.view.yaw = 0;
-		this.scene.view.pitch = 0;
+		this.getView(0).yaw = 0;
+		this.getView(0).pitch = 0;
 
 		this.fitToScreen(box);
 	};
 	
 	setBackView(box){
-		this.scene.view.yaw = Math.PI;
-		this.scene.view.pitch = 0;
+		this.getView(0).yaw = Math.PI;
+		this.getView(0).pitch = 0;
 		
 		this.fitToScreen(box);
 	};
 
 	setLeftView(box){
-		this.scene.view.yaw = -Math.PI / 2;
-		this.scene.view.pitch = 0;
+		this.getView(0).yaw = -Math.PI / 2;
+		this.getView(0).pitch = 0;
 
 		this.fitToScreen(box);
 	};
 
 	setRightView (box) {
-		this.scene.view.yaw = Math.PI / 2;
-		this.scene.view.pitch = 0;
+		this.getView(0).yaw = Math.PI / 2;
+		this.getView(0).pitch = 0;
 
 		this.fitToScreen(box);
 	};
