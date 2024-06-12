@@ -291,6 +291,7 @@ export class Measure extends THREE.Object3D {
 		this._showDistances = true;
 		this._showCoordinates = false;
 		this._showArea = false;
+		this._showVolume = false;
 		this._closed = true;
 		this._showAngles = false;
 		this._showCircle = false;
@@ -298,6 +299,13 @@ export class Measure extends THREE.Object3D {
 		this._showEdges = true;
 		this._showAzimuth = false;
 		this.maxMarkers = Number.MAX_SAFE_INTEGER;
+		this.triangulate = null;
+
+		this.calcVolume = false;
+		this.volumeType = "fill";
+		this.computeVolume = () => {};
+		this.castObjects = [];
+		this.pointsToAdd = [];
 
 		this.sphereGeometry = new THREE.SphereGeometry(0.4, 10, 10);
 		this.color = new THREE.Color(0xff0000);
@@ -312,6 +320,7 @@ export class Measure extends THREE.Object3D {
 		this.heightEdge = createHeightLine();
 		this.heightLabel = createHeightLabel();
 		this.areaLabel = createAreaLabel();
+		this.volumeLabel = createAreaLabel();
 		this.circleRadiusLabel = createCircleRadiusLabel();
 		this.circleRadiusLine = createCircleRadiusLine();
 		this.circleLine = createCircleLine();
@@ -322,6 +331,7 @@ export class Measure extends THREE.Object3D {
 		this.add(this.heightEdge);
 		this.add(this.heightLabel);
 		this.add(this.areaLabel);
+		this.add(this.volumeLabel);
 		this.add(this.circleRadiusLabel);
 		this.add(this.circleRadiusLine);
 		this.add(this.circleLine);
@@ -342,7 +352,7 @@ export class Measure extends THREE.Object3D {
 		return sphereMaterial;
 	};
 
-	addMarker (point) {
+	addMarker (point, rayCastPosition = () => {}) {
 		if (point.x != null) {
 			point = {position: point};
 		}else if(point instanceof Array){
@@ -414,7 +424,7 @@ export class Measure extends THREE.Object3D {
 		}
 
 		{ // Event Listeners
-			let drag = (e) => {
+			let drag = async (e) => {
 				let I = Utils.getMousePointCloudIntersection(
 					e.drag.end, 
 					e.viewer.scene.getActiveCamera(), 
@@ -422,6 +432,7 @@ export class Measure extends THREE.Object3D {
 					e.viewer.scene.pointclouds,
 					{pickClipped: true});
 
+				let location = await rayCastPosition();
 				if (I) {
 					let i = this.spheres.indexOf(e.drag.object);
 					if (i !== -1) {
@@ -437,9 +448,11 @@ export class Measure extends THREE.Object3D {
 						for (let key of Object.keys(I.point).filter(e => e !== 'position')) {
 							point[key] = I.point[key];
 						}
-
-						this.setPosition(i, I.location);
 					}
+				}
+				let i = this.spheres.indexOf(e.drag.object);
+				if ( i !== -1 && location) {
+					this.setPosition(i, location);
 				}
 			};
 
@@ -525,17 +538,75 @@ export class Measure extends THREE.Object3D {
 		this.update();
 	};
 
+	getVolume() {
+		// using delaunay triangulation
+		let volume = 0;
+		let vertices = [];
+		let point_positions = this.points.map((point) => point.position);
+		let all_points = point_positions.concat(this.pointsToAdd);
+		all_points.forEach((point) => {
+			let coordinates = [point.x, point.y, point.z];
+			vertices.push(coordinates);
+		});
+		const triangulated_indices = this.triangulate(vertices);
+		let tetrahedron_array = new Array(triangulated_indices.length);
+
+		triangulated_indices.forEach((indices, i) => {
+			tetrahedron_array[i] = [
+				vertices[indices[0]],
+				vertices[indices[1]],
+				vertices[indices[2]],
+				vertices[indices[3]],
+			];
+		});
+
+		const subtract_arr = (arr1, arr2) =>
+			arr2.map(function (num, idx) {
+				return num - arr1[idx];
+			});
+
+		const determinant = (arr) =>
+			arr[0][0] * (arr[1][1] * arr[2][2] - arr[1][2] * arr[2][1]) -
+			arr[0][1] * (arr[1][0] * arr[2][2] - arr[1][2] * arr[2][0]) +
+			arr[0][2] * (arr[1][0] * arr[2][1] - arr[1][1] * arr[2][0]);
+
+		const volume_tetrahedron = (tetrahedron) => {
+			const a = tetrahedron[0];
+			const b = tetrahedron[1];
+			const c = tetrahedron[2];
+			const d = tetrahedron[3];
+			const matrix = [
+				subtract_arr(a, d),
+				subtract_arr(b, d),
+				subtract_arr(c, d),
+			];
+			return Math.abs(determinant(matrix)) / 6;
+		};
+		if (tetrahedron_array.length > 0) {
+			const volumes = tetrahedron_array.map(volume_tetrahedron);
+			volume = volumes.reduce((a, b) => a + b);
+		}
+		return volume;
+	}
+
 	getArea () {
+		//Using shoelace formula for 3D space
 		let area = 0;
 		let j = this.points.length - 1;
+		let x_mag, y_mag, z_mag;
+		x_mag = 0;
+		y_mag = 0;
+		z_mag = 0;
 
 		for (let i = 0; i < this.points.length; i++) {
 			let p1 = this.points[i].position;
 			let p2 = this.points[j].position;
-			area += (p2.x + p1.x) * (p1.y - p2.y);
+			x_mag += p1.y * p2.z - p1.z * p2.y;
+			y_mag += p1.z * p2.x - p1.x * p2.z;
+			z_mag += p1.x * p2.y - p1.y * p2.x
 			j = i;
 		}
-
+		area = Math.sqrt(x_mag * x_mag + y_mag * y_mag + z_mag * z_mag);
 		return Math.abs(area / 2);
 	};
 
@@ -831,6 +902,66 @@ export class Measure extends THREE.Object3D {
 			this.areaLabel.setText(msg);
 		}
 
+		{
+			// Calculating volume on click of button rather than on each update as it could be a costly operation
+			if (this.calcVolume && this.points.length >= 3) {
+				let points = [];
+				this.pointsToAdd = [];
+				this.points.forEach((p) => {
+					points.push(p.position);
+				});
+				// gives the direction of vector for raycaster
+				let direction = this.computeVolume(points, this.volumeType);
+				let x_min = 10000;
+				let y_min = 10000;
+				let z_min = 10000;
+				let x_max = -10000;
+				let y_max = -10000;
+				let z_max = -10000;
+
+				points.forEach((point) => {
+					if(point.x < x_min) x_min = point.x;
+					if(point.y < y_min) y_min = point.y;
+					if(point.z < z_min) z_min = point.z;
+					if(point.x > x_max) x_max = point.x;
+					if(point.y > y_max) y_max = point.y;
+					if(point.z > z_max) z_max = point.z;
+				});
+
+				//Using raycaster to find intersection points for every 2 units of distance
+				for (let x = x_min; x < x_max; x += 2) {
+					for (let y = y_min; y < y_max; y += 2) {
+						let raycaster_volume = new THREE.Raycaster(
+							new THREE.Vector3(x, y, z_min),
+							direction
+						);
+						let intersections = raycaster_volume.intersectObjects(
+							this.castObjects
+						);
+						if (intersections.length) {
+							this.pointsToAdd.push(intersections[0].point);
+						}
+					}
+				}
+
+				this.calcVolume = false;
+				this.volumeLabel.position.copy(centroid);
+				this.volumeLabel.visible = this.showVolume && this.points.length >= 3;
+				let volume = this.getVolume();
+				let suffix = "";
+				if (this.lengthUnit != null && this.lengthUnitDisplay != null) {
+					volume =
+						(volume / Math.pow(this.lengthUnit.unitspermeter, 3)) *
+						Math.pow(this.lengthUnitDisplay.unitspermeter, 3); //convert to cubic meters then to the cubic display unit
+					suffix = this.lengthUnitDisplay.code;
+				}
+
+				let txtArea = Utils.addCommas(volume.toFixed(1));
+				let msg = `${txtArea} ${suffix}\u00B3`;
+				this.volumeLabel.setText(msg);
+			}
+		}
+
 		// this.updateAzimuth();
 	};
 
@@ -912,6 +1043,15 @@ export class Measure extends THREE.Object3D {
 
 	set showArea (value) {
 		this._showArea = value;
+		this.update();
+	}
+
+	get showVolume () {
+		return this._showVolume;
+	}
+
+	set showVolume (value) {
+		this._showVolume = value;
 		this.update();
 	}
 

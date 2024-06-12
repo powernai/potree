@@ -7,66 +7,84 @@ export class NavigationCube extends THREE.Object3D {
 		super();
 
 		this.viewer = viewer;
+		this.domArea = this.viewer.renderArea;
+		this.width = 125; // in px
+		this.fitToObject = () => {}; // function to compute boundingBox
 
 		let createPlaneMaterial = (img) => {
+			let textureLoader = new THREE.TextureLoader();
+			let canvas = document.createElement("canvas");
+			canvas.width = this.width;
+			canvas.height = this.width;
+			let ctx = canvas.getContext("2d");
+			ctx.font = "64px sans-serif";
+			ctx.textBaseline = "middle";
+			ctx.textAlign = "center";
+			ctx.fillStyle = "#222a32"; // cubeColor from CPMS
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			ctx.fillStyle = "white"; // color of the text in cube
+			ctx.fillText(img, this.width / 2, this.width / 2);
 			let material = new THREE.MeshBasicMaterial( {
 				depthTest: true, 
 				depthWrite: true,
-				side: THREE.DoubleSide
+				side: THREE.DoubleSide,
+				map: textureLoader.load(canvas.toDataURL())
 			});
-			new THREE.TextureLoader().load(
-				exports.resourcePath + '/textures/navigation/' + img,
-				function(texture) {
-					texture.anisotropy = viewer.renderer.capabilities.getMaxAnisotropy();
-					material.map = texture;
-					material.needsUpdate = true;
-				});
+			// new TextureLoader().load(
+			// 	exports.resourcePath + '/textures/navigation/' + img,
+			// 	function (texture) {
+			// 		texture.anisotropy = viewer.renderer.capabilities.getMaxAnisotropy();
+			// 		material.map = texture;
+			// 		material.needsUpdate = true;
+			// 	}
+			// );
 			return material;
 		};
 
 		let planeGeometry = new THREE.PlaneGeometry(1, 1);
 
-		this.front = new THREE.Mesh(planeGeometry, createPlaneMaterial('F.png'));
+		this.front = new THREE.Mesh(planeGeometry, createPlaneMaterial('S'));
 		this.front.position.y = -0.5;
 		this.front.rotation.x = Math.PI / 2.0;
 		this.front.updateMatrixWorld();
-		this.front.name = "F";
+		this.front.name = "South";
 		this.add(this.front);
 
-		this.back = new THREE.Mesh(planeGeometry, createPlaneMaterial('B.png'));
+		this.back = new THREE.Mesh(planeGeometry, createPlaneMaterial('N'));
 		this.back.position.y = 0.5;
-		this.back.rotation.x = Math.PI / 2.0;
+		this.back.rotation.x = -Math.PI / 2.0;
 		this.back.updateMatrixWorld();
-		this.back.name = "B";
+		this.back.name = "North";
 		this.add(this.back);
 
-		this.left = new THREE.Mesh(planeGeometry, createPlaneMaterial('L.png'));
+		this.left = new THREE.Mesh(planeGeometry, createPlaneMaterial('W'));
 		this.left.position.x = -0.5;
-		this.left.rotation.y = Math.PI / 2.0;
+		this.left.rotation.y = -Math.PI / 2.0;
+		this.left.rotation.z = -Math.PI / 2.0;
 		this.left.updateMatrixWorld();
-		this.left.name = "L";
+		this.left.name = "West";
 		this.add(this.left);
 
-		this.right = new THREE.Mesh(planeGeometry, createPlaneMaterial('R.png'));
+		this.right = new THREE.Mesh(planeGeometry, createPlaneMaterial('E'));
 		this.right.position.x = 0.5;
-		this.right.rotation.y = Math.PI / 2.0;
+		this.right.rotation.y = 3 * (Math.PI / 2.0);
+		this.right.rotation.z = Math.PI / 2.0;
 		this.right.updateMatrixWorld();
-		this.right.name = "R";
+		this.right.name = "East";
 		this.add(this.right);
 
-		this.bottom = new THREE.Mesh(planeGeometry, createPlaneMaterial('D.png'));
+		this.bottom = new THREE.Mesh(planeGeometry, createPlaneMaterial('D'));
 		this.bottom.position.z = -0.5;
+		this.bottom.rotation.z = -Math.PI;
 		this.bottom.updateMatrixWorld();
 		this.bottom.name = "D";
 		this.add(this.bottom);
 
-		this.top = new THREE.Mesh(planeGeometry, createPlaneMaterial('U.png'));
+		this.top = new THREE.Mesh(planeGeometry, createPlaneMaterial('U'));
 		this.top.position.z = 0.5;
 		this.top.updateMatrixWorld();
 		this.top.name = "U";
 		this.add(this.top);
-
-		this.width = 150; // in px
 
 		this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
 		this.camera.position.copy(new THREE.Vector3(0, 0, 0));
@@ -81,8 +99,10 @@ export class NavigationCube extends THREE.Object3D {
 			
 			this.pickedFace = null;
 			let mouse = new THREE.Vector2();
+			const boundingBox = this.domArea.getBoundingClientRect();
 			mouse.x = event.clientX - (window.innerWidth - this.width);
-			mouse.y = event.clientY;
+			mouse.y = this.width - (boundingBox.bottom - 75 - event.clientY); // 75 is distance in px from bottom of canvas where cube is
+			// To change the distance, also make the same change in PotreeRenderer class in setViewport()
 
 			if(mouse.x < 0 || mouse.y > this.width) return;
 
@@ -104,7 +124,8 @@ export class NavigationCube extends THREE.Object3D {
 			}
 			
 			if(this.pickedFace) {
-				this.viewer.setView(this.pickedFace);
+				let bbox = this.fitToObject();
+				this.viewer.setView(this.pickedFace, bbox);
 			}
 		};
 

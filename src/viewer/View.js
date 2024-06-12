@@ -6,7 +6,13 @@ export class View{
 
 		this.yaw = Math.PI / 4;
 		this._pitch = -Math.PI / 4;
+		// Added 3rd axis of rotation.
+		this.roll = 0;
+		// Added 2 other offsets.
+		// Now pivot is able to be offset from the camera in all 3 dimensions instead of just in the forward direction.
 		this.radius = 1;
+		this.sideOffset = 0;
+		this.upOffset = 0;
 
 		this.maxPitch = Math.PI / 2;
 		this.minPitch = -Math.PI / 2;
@@ -16,7 +22,10 @@ export class View{
 		let c = new View();
 		c.yaw = this.yaw;
 		c._pitch = this.pitch;
+		c.roll = this.roll;
 		c.radius = this.radius;
+		c.sideOffset = this.sideOffset;
+		c.upOffset = this.upOffset;
 		c.maxPitch = this.maxPitch;
 		c.minPitch = this.minPitch;
 
@@ -36,6 +45,7 @@ export class View{
 
 		dir.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.pitch);
 		dir.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
+		dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.roll);
 
 		return dir;
 	}
@@ -50,11 +60,27 @@ export class View{
 			let pitch = Math.atan2(dir.z, Math.sqrt(dir.x * dir.x + dir.y * dir.y));
 
 			this.yaw = yaw;
+			this.roll = 0;
 			this.pitch = pitch;
 		}
 		
 	}
 
+	getPivot() {
+		// Considering all three offsets in pivot access, instead of just the forward offset (radius).
+		return this.position.clone()
+			.add(this.getSide().multiplyScalar(this.sideOffset))
+			.add(this.direction.multiplyScalar(this.radius))
+			.add(this.getUp().multiplyScalar(this.upOffset));
+	}
+
+	// Sets pivot to t and shifts the camera by the same amount that the pivot was shifted, so it will still have the same rotation and pan offsets from the pivot.
+	setPivot(newPivot) {
+		const oldPivot = this.getPivot();
+		this.position.add(newPivot.clone().sub(oldPivot));
+	}
+
+	// Sets pivot to t and rotates the camera to look directly at it.
 	lookAt(t){
 		let V;
 		if(arguments.length === 1){
@@ -67,31 +93,37 @@ export class View{
 		let dir = V.normalize();
 
 		this.radius = radius;
+		this.sideOffset = 0;
+		this.upOffset = 0;
 		this.direction = dir;
-	}
-
-	getPivot () {
-		return new THREE.Vector3().addVectors(this.position, this.direction.multiplyScalar(this.radius));
 	}
 
 	getSide () {
 		let side = new THREE.Vector3(1, 0, 0);
+		// Does not require applyAxisAngle(1,0,0) because it would have no effect on the vector
 		side.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
+		side.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.roll);
 
 		return side;
 	}
 
-	pan (x, y) {
-		let dir = new THREE.Vector3(0, 1, 0);
-		dir.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.pitch);
-		dir.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
+	// New function for convenient access of the up vector to clean up duplicate code
+	getUp() {
+		let up = new THREE.Vector3(0, 0, 1);
+		up.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.pitch);
+		up.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
+		up.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.roll);
 
-		// let side = new THREE.Vector3(1, 0, 0);
-		// side.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
+		return up;
+	}
+
+	pan (x, y) {
+		// Replaced some duplicates of this.direction, getSide, getUp code with the actual function calls, here and in the translate function.
+		this.sideOffset -= x;
+		this.upOffset -= y;
 
 		let side = this.getSide();
-
-		let up = side.clone().cross(dir);
+		let up = this.getUp();
 
 		let pan = side.multiplyScalar(x).add(up.multiplyScalar(y));
 
@@ -100,14 +132,13 @@ export class View{
 	}
 
 	translate (x, y, z) {
-		let dir = new THREE.Vector3(0, 1, 0);
-		dir.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.pitch);
-		dir.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
-
-		let side = new THREE.Vector3(1, 0, 0);
-		side.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
-
-		let up = side.clone().cross(dir);
+		this.sideOffset -= x;
+		this.radius -= y;
+		this.upOffset -= z;
+		
+		let dir = this.direction
+		let side = this.getSide();
+		let up = this.getUp();
 
 		let t = side.multiplyScalar(x)
 			.add(dir.multiplyScalar(y))

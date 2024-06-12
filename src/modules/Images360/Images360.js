@@ -10,13 +10,14 @@ let sm = new THREE.MeshBasicMaterial({side: THREE.BackSide});
 let smHovered = new THREE.MeshBasicMaterial({side: THREE.BackSide, color: 0xff0000});
 
 let raycaster = new THREE.Raycaster();
-let currentlyHovered = null;
 
 let previousView = {
 	controls: null,
 	position: null,
 	target: null,
 };
+
+let visibleImages = [];
 
 class Image360{
 
@@ -51,6 +52,7 @@ export class Images360 extends EventDispatcher{
 		this.node = new THREE.Object3D();
 
 		this.sphere = new THREE.Mesh(sgHigh, sm);
+		this.alternateFocus = false;
 		this.sphere.visible = false;
 		this.sphere.scale.set(1000, 1000, 1000);
 		this.node.add(this.sphere);
@@ -58,13 +60,14 @@ export class Images360 extends EventDispatcher{
 		// this.node.add(label);
 
 		this.focusedImage = null;
+		this.currentlyHovered = null;
 
 		let elUnfocus = document.createElement("input");
 		elUnfocus.type = "button";
 		elUnfocus.value = "unfocus";
 		elUnfocus.style.position = "absolute";
-		elUnfocus.style.right = "10px";
-		elUnfocus.style.bottom = "10px";
+		elUnfocus.style.top = "3rem";
+		elUnfocus.style.right = "8px";
 		elUnfocus.style.zIndex = "10000";
 		elUnfocus.style.fontSize = "2em";
 		elUnfocus.addEventListener("click", () => this.unfocus());
@@ -79,14 +82,35 @@ export class Images360 extends EventDispatcher{
 		});
 		viewer.inputHandler.addInputListener(this);
 
-		this.addEventListener("mousedown", () => {
-			if(currentlyHovered && currentlyHovered.image360){
-				this.focus(currentlyHovered.image360);
+		this.focusFunction = () => {
+			if(this.currentlyHovered && this.currentlyHovered.image360) {
+				// calling focus from mini scene's 360 images
+				if (this.alternateFocus) {
+					if (this.companionObject.focusedImage) {
+						let objIdx = this.node.children.indexOf(this.currentlyHovered);
+						this.companionObject.currentlyHovered = this.companionObject.node.children[objIdx];
+						this.companionObject.focus(this.companionObject.currentlyHovered.image360);
+					}
+				} else {
+					// calling focus on clicking from main 4D scene
+					if(!this.focusedImage) {
+						this.focus(this.currentlyHovered.image360);
+					}
+				}
 			}
-		});
-		
+		};
+
+		this.addEventListener("mousedown", this.focusFunction);
 	}
 
+	addListeners() {
+		this.addEventListener("mousedown", this.focusFunction, false);
+	}
+
+	releaseListeners() {
+		this.removeEventListener("mousedown", this.focusFunction, false);
+	}
+	
 	set visible(visible){
 		if(this._visible === visible){
 			return;
@@ -115,9 +139,9 @@ export class Images360 extends EventDispatcher{
 		}
 
 		previousView = {
-			controls: this.viewer.controls,
-			position: this.viewer.scene.view.position.clone(),
-			target: this.viewer.scene.view.getPivot(),
+			controls: previousView.controls ?? this.viewer.controls,
+			position: previousView.position ?? this.viewer.scene.view.position.clone(),
+			target: previousView.target ?? this.viewer.scene.view.getPivot(),
 		};
 
 		this.viewer.setControls(this.viewer.orbitControls);
@@ -128,27 +152,44 @@ export class Images360 extends EventDispatcher{
 		}
 
 		this.selectingEnabled = false;
-		this.sphere.visible = false;
 
 		this.load(image360).then( () => {
 			this.sphere.visible = true;
+			this.sphere.material = this.sphere.material.clone();
 			this.sphere.material.map = image360.texture;
 			this.sphere.material.needsUpdate = true;
+			this.elUnfocus.style.display = '';
 		});
+		if (!this.alternateFocus) {
+			this.sphere.material = sm;
+		}
 
 		{ // orientation
 			let {course, pitch, roll} = image360;
-			this.sphere.rotation.set(
-				THREE.Math.degToRad(+roll + 90),
-				THREE.Math.degToRad(-pitch),
-				THREE.Math.degToRad(-course + 90),
-				"ZYX"
-			);
+			//reset orientation everytime
+			this.sphere.rotation.set(0, 0, 0, 'ZYX');
+			// Apply inverse node rotations in order (-Z, -Y, -X)
+			this.sphere.rotateZ(-this.node.rotation.z);
+			this.sphere.rotateY(-this.node.rotation.y);
+			this.sphere.rotateX(-this.node.rotation.x);
+			//Apply course, pitch and roll
+			this.sphere.rotateZ(THREE.MathUtils.degToRad(-course + 90));
+			this.sphere.rotateY(THREE.MathUtils.degToRad(-pitch));
+			this.sphere.rotateX(THREE.MathUtils.degToRad(+roll + 90));
+			//to render at last so that its always visible ahead of BIM
+			this.sphere.renderOrder = 999;
+			//clearDepth removes any depthBuffer the render has so that the next object is always rendered and shown on top
+			this.sphere.onBeforeRender = function (renderer) {
+				renderer.clearDepth();
+			};
 		}
 
-		this.sphere.position.set(...image360.position);
+		//get world position instead of relative position
+		let pos_vec = new THREE.Vector3();
+		image360.mesh.getWorldPosition(pos_vec);
+		this.sphere.position.set(pos_vec.x, pos_vec.y, pos_vec.z);
 
-		let target = new THREE.Vector3(...image360.position);
+		let target = new THREE.Vector3(pos_vec.x, pos_vec.y, pos_vec.z);
 		let dir = target.clone().sub(this.viewer.scene.view.position).normalize();
 		let move = dir.multiplyScalar(0.000001);
 		let newCamPos = target.clone().sub(move);
@@ -161,14 +202,24 @@ export class Images360 extends EventDispatcher{
 
 		this.focusedImage = image360;
 
-		this.elUnfocus.style.display = "";
+		this.viewer.scissorZones[0].scene.images360.forEach((images360) => {
+			if (images360.selectingEnabled && images360.visible) {
+				visibleImages.push(images360);
+				images360.hide();
+				images360.releaseListeners();
+			}
+		});
 		
 		this.focusAction(image360);
 	}
 
 	unfocus(){
 		this.selectingEnabled = true;
-
+		visibleImages.forEach((images360) => {
+			images360.show();
+			images360.addListeners();
+		});
+		visibleImages = [];
 		for(let image of this.images){
 			image.mesh.visible = true;
 		}
@@ -229,14 +280,28 @@ export class Images360 extends EventDispatcher{
 
 	handleHovering(viewer){
 		let mouse = viewer.inputHandler.mouse;
-		let camera = viewer.scene.getActiveCamera();
 		let domElement = viewer.renderer.domElement;
 
-		let ray = Potree.Utils.mouseToRay(mouse, camera, domElement.clientWidth, domElement.clientHeight);
-
-		// let tStart = performance.now();
-		raycaster.ray.copy(ray);
-		let intersections = raycaster.intersectObjects(this.node.children);
+		let intersections = [];
+		// Backwards loop so the last rendered zone (the one rendered on top) catches the mouse in case of overlapping canvases.
+		for (let i = viewer.scissorZones.length - 1; i >= 0; i--) {
+			if (
+				!viewer.scissorZones[i].visible ||
+				!viewer.scissorZones[i].scene.images360.includes(this)
+			)
+				continue;
+			let camera = viewer.getCamera(i);
+			let ray = Potree.Utils.mouseToRay(mouse, camera, 
+				domElement.clientWidth, domElement.clientHeight,
+				viewer.getScissor(i), viewer.getViewport(i)
+			);
+			if (ray) {
+				// let tStart = performance.now();
+				raycaster.ray.copy(ray);
+				intersections.push(raycaster.intersectObjects(this.node.children));
+			}
+		}
+		intersections = intersections.flat();
 
 		if(intersections.length === 0){
 			// label.visible = false;
@@ -245,21 +310,29 @@ export class Images360 extends EventDispatcher{
 		}
 
 		let intersection = intersections[0];
-		currentlyHovered = intersection.object;
-		currentlyHovered.material = smHovered;
+		// Highlight the same sphere on other scene. Don't highlight if zoomed into the 360 view.
+		if (!this.focusedImage && intersections.length > 1) {
+			this.currentlyHovered = intersection.object;
+			this.currentlyHovered.material = smHovered;
+		}
+		if (this.companionObject && !this.companionObject.focusedImage && this.alternateFocus && intersections.length > 1) {
+			let objIdx = this.node.children.indexOf(intersection.object);
+			this.companionObject.currentlyHovered = this.companionObject.node.children[objIdx];
+			this.companionObject.currentlyHovered.material = smHovered;
+		}
 
 		//label.visible = true;
-		//label.setText(currentlyHovered.image360.file);
-		//currentlyHovered.getWorldPosition(label.position);
+		//label.setText(this.currentlyHovered.image360.file);
+		//this.currentlyHovered.getWorldPosition(label.position);
 	}
 
 	update(){
 
 		let {viewer} = this;
 
-		if(currentlyHovered){
-			currentlyHovered.material = sm;
-			currentlyHovered = null;
+		if(this.currentlyHovered){
+			this.currentlyHovered.material = sm;
+			this.currentlyHovered = null;
 		}
 
 		if(this.selectingEnabled){

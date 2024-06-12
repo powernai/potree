@@ -164,6 +164,39 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 		this.vertexColors = THREE.VertexColors;
 
 		this.updateShaderSource();
+
+		this.destroy = () => {
+			// Dispose of textures
+
+			// This version of npm does not support ?. operator.
+			// I would like to do this.visibleNodesTexture?.dispose?.() instead.
+			const optionallyDispose = x => {
+				if(this[x])
+					if(this[x].dispose)
+						this[x].dispose();
+			}
+			optionallyDispose("visibleNodesTexture");
+			optionallyDispose("gradientTexture");
+			optionallyDispose("matcapTexture");
+			optionallyDispose("classificationTexture");
+
+			// Set textures to null to remove references
+			// this.visibleNodesTexture = null;
+			// this.gradientTexture = null;
+			// this.matcapTexture = null;
+			// this.classificationTexture = null;
+
+			// Dispose of attributes
+			Object.values(this.attributes).forEach((attribute) => {
+				attribute.value = null;
+			});
+
+			// Clear maps and other properties
+			this.defines.clear();
+			this.ranges.clear();
+
+			this.dispose();
+		};
 	}
 
 	setDefine(key, value){

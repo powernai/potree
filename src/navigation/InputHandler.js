@@ -18,7 +18,7 @@ export class InputHandler extends EventDispatcher {
 		this.domElement = this.renderer.domElement;
 		this.enabled = true;
 		
-		this.scene = null;
+		this.sceneArray = [];
 		this.interactiveScenes = [];
 		this.interactiveObjects = new Set();
 		this.inputListeners = [];
@@ -56,6 +56,14 @@ export class InputHandler extends EventDispatcher {
 		this.domElement.addEventListener('touchend', this.onTouchEnd.bind(this));
 		this.domElement.addEventListener('touchmove', this.onTouchMove.bind(this));
 	}
+	get scene() {
+		if (this.sceneArray.length > 0) return this.sceneArray[0];
+		else return null;
+	}
+	set scene(val) {
+		if (this.sceneArray.length > 0) this.sceneArray[0] = val;
+		else this.sceneArray.push(val);
+	}
 
 	addInputListener (listener) {
 		this.inputListeners.push(listener);
@@ -79,13 +87,29 @@ export class InputHandler extends EventDispatcher {
 
 		e.preventDefault();
 
+		let rect = this.domElement.getBoundingClientRect();
+		let x = e.touches[0].pageX - rect.left;
+		let y = e.touches[0].pageY - rect.bottom;
+		let width = rect.right - rect.left;
+		let height = rect.top - rect.bottom;
+
+		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the touch.
+		let i;
+		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
+			if (!this.viewer.scissorZones[i].visible) continue;
+			const scissor = this.viewer.getScissor(i);
+			if (
+				x >= scissor.x &&
+				y <= scissor.y &&
+				x <= scissor.x + scissor.width &&
+				y >= scissor.y + scissor.height
+			)
+				break;
+		}
 		if (e.touches.length === 1) {
-			let rect = this.domElement.getBoundingClientRect();
-			let x = e.touches[0].pageX - rect.left;
-			let y = e.touches[0].pageY - rect.top;
 			this.mouse.set(x, y);
 
-			this.startDragging(null);
+			this.startDragging(null, null, i);
 		}
 
 		
@@ -93,7 +117,8 @@ export class InputHandler extends EventDispatcher {
 			inputListener.dispatchEvent({
 				type: e.type,
 				touches: e.touches,
-				changedTouches: e.changedTouches
+				changedTouches: e.changedTouches,
+				scissorZoneIdx: i,
 			});
 		}
 	}
@@ -103,11 +128,32 @@ export class InputHandler extends EventDispatcher {
 
 		e.preventDefault();
 
+		let rect = this.domElement.getBoundingClientRect();
+		let x = e.touches[0].pageX - rect.left;
+		let y = e.touches[0].pageY - rect.bottom;
+		let width = rect.right - rect.left;
+		let height = rect.top - rect.bottom;
+
+		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the touch.
+		let i;
+		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
+			if (!this.viewer.scissorZones[i].visible) continue;
+			const scissor = this.viewer.getScissor(i);
+			if (
+				x >= scissor.x &&
+				y <= scissor.y &&
+				x <= scissor.x + scissor.width &&
+				y >= scissor.y + scissor.height
+			)
+				break;
+		}
+
 		for (let inputListener of this.getSortedListeners()) {
 			inputListener.dispatchEvent({
 				type: 'drop',
 				drag: this.drag,
-				viewer: this.viewer
+				viewer: this.viewer,
+				scissorZoneIdx: i,
 			});
 		}
 
@@ -117,7 +163,8 @@ export class InputHandler extends EventDispatcher {
 			inputListener.dispatchEvent({
 				type: e.type,
 				touches: e.touches,
-				changedTouches: e.changedTouches
+				changedTouches: e.changedTouches,
+				scissorZoneIdx: i,
 			});
 		}
 	}
@@ -126,14 +173,31 @@ export class InputHandler extends EventDispatcher {
 		if (this.logMessages) console.log(this.constructor.name + ': onTouchMove');
 
 		e.preventDefault();
+		
+		let rect = this.domElement.getBoundingClientRect();
+		let x = e.touches[0].pageX - rect.left;
+		let y = e.touches[0].pageY - rect.top;
+		let width = rect.right - rect.left;
+		let height = rect.top - rect.bottom;
+
+		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the touch.
+		let i;
+		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
+			if (!this.viewer.scissorZones[i].visible) continue;
+			const scissor = this.viewer.getScissor(i);
+			if (
+				x >= scissor.x &&
+				y <= scissor.y &&
+				x <= scissor.x + scissor.width &&
+				y >= scissor.y + scissor.height
+			)
+				break;
+		}
 
 		if (e.touches.length === 1) {
-			let rect = this.domElement.getBoundingClientRect();
-			let x = e.touches[0].pageX - rect.left;
-			let y = e.touches[0].pageY - rect.top;
 			this.mouse.set(x, y);
 
-			if (this.drag) {
+			if (this.drag && this.drag.scissorZoneIdx == i) {
 				this.drag.mouse = 1;
 
 				this.drag.lastDrag.x = x - this.drag.end.x;
@@ -146,7 +210,8 @@ export class InputHandler extends EventDispatcher {
 					inputListener.dispatchEvent({
 						type: 'drag',
 						drag: this.drag,
-						viewer: this.viewer
+						viewer: this.viewer,
+						scissorZoneIdx: i,
 					});
 				}
 			}
@@ -156,7 +221,8 @@ export class InputHandler extends EventDispatcher {
 			inputListener.dispatchEvent({
 				type: e.type,
 				touches: e.touches,
-				changedTouches: e.changedTouches
+				changedTouches: e.changedTouches,
+				scissorZoneIdx: i,
 			});
 		}
 
@@ -168,7 +234,8 @@ export class InputHandler extends EventDispatcher {
 		//	inputListener.dispatchEvent({
 		//		type: e.type,
 		//		touches: debugTouches,
-		//		changedTouches: e.changedTouches
+		//		changedTouches: e.changedTouches,
+		//		scissorZoneIdx: i
 		//	});
 		// }
 	}
@@ -216,13 +283,32 @@ export class InputHandler extends EventDispatcher {
 	onDoubleClick (e) {
 		if (this.logMessages) console.log(this.constructor.name + ': onDoubleClick');
 
+		let rect = this.domElement.getBoundingClientRect();
+		let x = e.clientX - rect.left;
+		let y = -(e.clientY - rect.bottom);
+
+		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the doubleclick.
+		let i;
+		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
+			if (!this.viewer.scissorZones[i].visible) continue;
+			const scissor = this.viewer.getScissor(i);
+			if (
+				x >= scissor.x &&
+				y >= scissor.y &&
+				x <= scissor.x + scissor.width &&
+				y <= scissor.y + scissor.height
+			)
+				break;
+		}
+
 		let consumed = false;
 		for (let hovered of this.hoveredElements) {
 			if (hovered._listeners && hovered._listeners['dblclick']) {
 				hovered.object.dispatchEvent({
 					type: 'dblclick',
 					mouse: this.mouse,
-					object: hovered.object
+					object: hovered.object,
+					scissorZoneIdx: i,
 				});
 				consumed = true;
 				break;
@@ -234,7 +320,8 @@ export class InputHandler extends EventDispatcher {
 				inputListener.dispatchEvent({
 					type: 'dblclick',
 					mouse: this.mouse,
-					object: null
+					object: null,
+					scissorZoneIdx: i,
 				});
 			}
 		}
@@ -255,12 +342,32 @@ export class InputHandler extends EventDispatcher {
 
 		let consumed = false;
 		let consume = () => { return consumed = true; };
+
+		let rect = this.domElement.getBoundingClientRect();
+		let x = e.clientX - rect.left;
+		let y = -(e.clientY - rect.bottom);
+
+		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the click.
+		let i;
+		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
+			if (!this.viewer.scissorZones[i].visible) continue;
+			const scissor = this.viewer.getScissor(i);
+			if (
+				x >= scissor.x &&
+				y >= scissor.y &&
+				x <= scissor.x + scissor.width &&
+				y <= scissor.y + scissor.height
+			)
+				break;
+		}
+
 		if (this.hoveredElements.length === 0) {
 			for (let inputListener of this.getSortedListeners()) {
 				inputListener.dispatchEvent({
 					type: 'mousedown',
 					viewer: this.viewer,
-					mouse: this.mouse
+					mouse: this.mouse,
+					scissorZoneIdx: i,
 				});
 			}
 		}else{
@@ -269,7 +376,8 @@ export class InputHandler extends EventDispatcher {
 				object.dispatchEvent({
 					type: 'mousedown',
 					viewer: this.viewer,
-					consume: consume
+					consume: consume,
+					scissorZoneIdx: i,
 				});
 
 				if(consumed){
@@ -286,9 +394,9 @@ export class InputHandler extends EventDispatcher {
 					el.object._listeners['drag'].length > 0));
 
 			if (target) {
-				this.startDragging(target.object, {location: target.point});
+				this.startDragging(target.object, {location: target.point}, i);
 			} else {
-				this.startDragging(null);
+				this.startDragging(null, null, i);
 			}
 		}
 
@@ -339,15 +447,16 @@ export class InputHandler extends EventDispatcher {
 				this.drag.object.dispatchEvent({
 					type: 'drop',
 					drag: this.drag,
-					viewer: this.viewer
-
+					viewer: this.viewer,
+					scissorZoneIdx: this.drag.scissorZoneIdx,
 				});
 			} else {
 				for (let inputListener of this.getSortedListeners()) {
 					inputListener.dispatchEvent({
 						type: 'drop',
 						drag: this.drag,
-						viewer: this.viewer
+						viewer: this.viewer,
+						scissorZoneIdx: this.drag.scissorZoneIdx,
 					});
 				}
 			}
@@ -504,24 +613,49 @@ export class InputHandler extends EventDispatcher {
 
 		// this.wheelDelta += Math.sign(delta);
 
+		let rect = this.domElement.getBoundingClientRect();
+		let x = e.clientX - rect.left;
+		let y = -(e.clientY - rect.bottom);
+		let width = rect.right - rect.left;
+		let height = rect.top - rect.bottom;
+
+		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the scroll.
+		let i;
+		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
+			if (!this.viewer.scissorZones[i].visible) continue;
+			const scissor = this.viewer.getScissor(i);
+			if (
+				x >= scissor.x &&
+				y >= scissor.y &&
+				x <= scissor.x + scissor.width &&
+				y <= scissor.y + scissor.height
+			)
+				break;
+		}
+
+		// Added "buttons" to access the currently held mousebuttons in a scroll event.
 		if (this.hoveredElement) {
 			this.hoveredElement.object.dispatchEvent({
 				type: 'mousewheel',
 				delta: ndelta,
-				object: this.hoveredElement.object
+				buttons: e.buttons,
+				object: this.hoveredElement.object,
+				scissorZoneIdx: i,
 			});
 		} else {
 			for (let inputListener of this.getSortedListeners()) {
 				inputListener.dispatchEvent({
 					type: 'mousewheel',
 					delta: ndelta,
-					object: null
+					buttons: e.buttons,
+					object: null,
+					scissorZoneIdx: i,
 				});
 			}
 		}
 	}
 
-	startDragging (object, args = null) {
+	startDragging (object, args = null, scissorZoneIdx = 0) {
 
 		let name = object ? object.name : "no name";
 		if (this.logMessages) console.log(`${this.constructor.name}: startDragging: '${name}'`);
@@ -531,7 +665,8 @@ export class InputHandler extends EventDispatcher {
 			end: this.mouse.clone(),
 			lastDrag: new THREE.Vector2(0, 0),
 			startView: this.scene.view.clone(),
-			object: object
+			object: object,
+			scissorZoneIdx: scissorZoneIdx,
 		};
 
 		if (args) {
@@ -650,34 +785,48 @@ export class InputHandler extends EventDispatcher {
 	}
 
 	getHoveredElements () {
-		let scenes = this.interactiveScenes.concat(this.scene.scene);
+		let intersections = [];
+		for (let i = 0; i < this.viewer.scissorZones.length; i++) {
+			if (!this.viewer.scissorZones[i].visible) continue;
+			let scenes = this.interactiveScenes.concat(
+				this.viewer.scissorZones[i].scene.scene
+			);
 
-		let interactableListeners = ['mouseup', 'mousemove', 'mouseover', 'mouseleave', 'drag', 'drop', 'click', 'select', 'deselect'];
-		let interactables = [];
-		for (let scene of scenes) {
-			scene.traverseVisible(node => {
-				if (node._listeners && node.visible && !this.blacklist.has(node)) {
-					let hasInteractableListener = interactableListeners.filter((e) => {
-						return node._listeners[e] !== undefined;
-					}).length > 0;
+			let interactableListeners = ['mouseup', 'mousemove', 'mouseover', 'mouseleave', 'drag', 'drop', 'click', 'select', 'deselect'];
+			let interactables = [];
+			for (let scene of scenes) {
+				scene.traverseVisible(node => {
+					if (node._listeners && node.visible && !this.blacklist.has(node)) {
+						let hasInteractableListener = interactableListeners.filter((e) => {
+							return node._listeners[e] !== undefined;
+						}).length > 0;
 
-					if (hasInteractableListener) {
-						interactables.push(node);
+						if (hasInteractableListener) {
+							interactables.push(node);
+						}
 					}
-				}
-			});
+				});
+			}
+		
+			let camera = this.viewer.getCamera(i);
+			let ray = Utils.mouseToRay(
+				this.mouse,
+				camera, 
+				this.domElement.clientWidth,
+				this.domElement.clientHeight,
+				this.viewer.getScissor(i),
+				this.viewer.getViewport(i)
+			);
+
+			if (ray) {
+				let raycaster = new THREE.Raycaster();
+				raycaster.ray.set(ray.origin, ray.direction);
+				raycaster.params.Line.threshold = 0.2;
+
+				intersections.push(raycaster.intersectObjects(interactables.filter(o => o.visible), false));
+			}
 		}
-		
-		let camera = this.scene.getActiveCamera();
-		let ray = Utils.mouseToRay(this.mouse, camera, this.domElement.clientWidth, this.domElement.clientHeight);
-		
-		let raycaster = new THREE.Raycaster();
-		raycaster.ray.set(ray.origin, ray.direction);
-		raycaster.params.Line.threshold = 0.2;
-
-		let intersections = raycaster.intersectObjects(interactables.filter(o => o.visible), false);
-
-		return intersections;
+		return intersections.flat();
 	}
 
 	setScene (scene) {

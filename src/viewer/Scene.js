@@ -18,12 +18,17 @@ export class Scene extends EventDispatcher{
 		this.sceneBG = new THREE.Scene();
 		this.scenePointCloud = new THREE.Scene();
 
-		this.cameraP = new THREE.PerspectiveCamera(this.fov, 1, 0.1, 1000*1000);
-		this.cameraO = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000*1000);
-		this.cameraVR = new THREE.PerspectiveCamera();
+		this.views = [
+			{
+				view: new View(),
+				cameraP: new THREE.PerspectiveCamera(this.fov, 1, 0.1, 1000*1000),
+				cameraO: new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000*1000),
+				cameraVR: new THREE.PerspectiveCamera(),
+				cameraMode: CameraMode.PERSPECTIVE,
+			},
+		];
 		this.cameraBG = new THREE.Camera();
 		this.cameraScreenSpace = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
-		this.cameraMode = CameraMode.PERSPECTIVE;
 		this.overrideCamera = null;
 		this.pointclouds = [];
 
@@ -43,11 +48,32 @@ export class Scene extends EventDispatcher{
 		this.deviceControls = null;
 		this.inputHandler = null;
 
-		this.view = new View();
-
 		this.directionalLight = null;
 
 		this.initialize();
+	}
+
+	// Support old code with getters/setters
+	get cameraP() {
+		if (this.views.length > 0) return this.views[0].cameraP;
+		else return null;
+	}
+	set cameraP(val) {
+		if (this.views.length > 0) this.views[0].cameraP = val;
+	}
+	get cameraO() {
+		if (this.views.length > 0) return this.views[0].cameraO;
+		else return null;
+	}
+	set cameraO(val) {
+		if (this.views.length > 0) this.views[0].cameraO = val;
+	}
+	get view() {
+		if (this.views.length > 0) return this.views[0].view;
+		else return null;
+	}
+	set view(val) {
+		if (this.views.length > 0) this.views[0].view = val;
 	}
 
 	estimateHeightAt (position) {
@@ -128,6 +154,19 @@ export class Scene extends EventDispatcher{
 			type: 'pointcloud_added',
 			pointcloud: pointcloud
 		});
+	}
+
+	removePointCloud(pointcloud) {
+		let index = this.pointclouds.indexOf(pointcloud);
+		if (index > -1) {
+			this.pointclouds.splice(index, 1);
+			this.scenePointCloud.remove(pointcloud);
+			this.dispatchEvent({
+				type: "pointcloud_removed",
+				scene: this,
+				pointcloud: pointcloud,
+			});
+		}
 	}
 
 	addVolume (volume) {
@@ -336,18 +375,19 @@ export class Scene extends EventDispatcher{
 		}
 	}
 
-	getActiveCamera() {
+	getActiveCamera(i = 0) {
 
 		if(this.overrideCamera){
 			return this.overrideCamera;
 		}
+		if (i >= this.views.length) return null;
 
-		if(this.cameraMode === CameraMode.PERSPECTIVE){
-			return this.cameraP;
-		}else if(this.cameraMode === CameraMode.ORTHOGRAPHIC){
-			return this.cameraO;
-		}else if(this.cameraMode === CameraMode.VR){
-			return this.cameraVR;
+		if(this.views[i].cameraMode === CameraMode.PERSPECTIVE){
+			return this.views[i].cameraP;
+		}else if(this.views[i].cameraMode === CameraMode.ORTHOGRAPHIC){
+			return this.views[i].cameraO;
+		}else if(this.views[i].cameraMode === CameraMode.VR){
+			return this.views[i].cameraVR;
 		}
 
 		return null;
@@ -359,10 +399,12 @@ export class Scene extends EventDispatcher{
 		this.referenceFrame.matrixAutoUpdate = false;
 		this.scenePointCloud.add(this.referenceFrame);
 
-		this.cameraP.up.set(0, 0, 1);
-		this.cameraP.position.set(1000, 1000, 1000);
-		this.cameraO.up.set(0, 0, 1);
-		this.cameraO.position.set(1000, 1000, 1000);
+		for (let i = 0; i < this.views.length; i++) {
+			this.views[i].cameraP.up.set(0, 0, 1);
+			this.views[i].cameraP.position.set(1000, 1000, 1000);
+			this.views[i].cameraO.up.set(0, 0, 1);
+			this.views[i].cameraO.position.set(1000, 1000, 1000);
+		}
 		//this.camera.rotation.y = -Math.PI / 4;
 		//this.camera.rotation.x = -Math.PI / 6;
 		this.cameraScreenSpace.lookAt(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0));
