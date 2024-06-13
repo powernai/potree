@@ -140,8 +140,6 @@ export class Viewer extends EventDispatcher{
 
 		this.classifications = ClassificationScheme.DEFAULT;
 
-		this.moveSpeed = 10;
-
 		this.lengthUnit = LengthUnits.METER;
 		this.lengthUnitDisplay = LengthUnits.METER;
 
@@ -163,13 +161,73 @@ export class Viewer extends EventDispatcher{
 		this.renderer = null;
 		this.pRenderer = null;
 
-		this.scene = null;
+		/*
+		If you want the exact same picture on both mini canvases,
+		set their scene and viewIdxInScene to be the same.
+
+		If you want the same scene from different angles on both mini canvases,
+		set their scene to be the same, and let viewIdxInScene be 0 for one of them and 1 for the other. 
+		Each new view angle in the same scene should have +1 viewIdxInScene.
+
+		If you want the two mini canvases to move in sync but view different scenes,
+		set their controls to be the same.
+
+		The whole renderer view is stretched/shrunk to fit the viewport, then cut to only display on the scissor.
+		But the viewport and scissor properties in the objects of the scissorZones arrays may not
+		exactly be used as viewport and scissor for the renderer, because of aspect-ratio-preserving logic
+		in the getScissor and getViewport functions.
+
+		Viewport and scissor are objects of the form {bottom, left, top, right}. Each is a number, 
+		where 0 represents the bottom or left and 1 represents the top or right
+		of the entire canvas. This specifies a rectangle portion of the canvas to use for the mini canvas.
+
+		If fitInside is true, viewport will proportionally scale to the maximum size that fits inside the scissor.
+		If it is false, viewport will proportionally scale to the minimum size that contains the scissor.
+		If viewportScissoring is true, the viewport and scissor given to the renderer will be identical,
+		and the entered viewport here will be the main factor in this.
+		*/
+		this.scissorZones = [
+			{
+				scene: null,
+				controls: null,
+				moveSpeed: 10,
+				fitInside: false,
+				viewportScissoring: false,
+				viewIdxInScene: 0,
+				scissor: { bottom: 0, left: 0, top: 1, right: 1 },
+				viewport: { bottom: 0, left: 0, top: 1, right: 1 },
+				id: "Main Canvas",
+				visible: true,
+			},
+			{
+				scene: null,
+				controls: null,
+				moveSpeed: 10,
+				fitInside: true,
+				viewportScissoring: true,
+				viewIdxInScene: 0,
+				scissor: { bottom: 0.4, left: 0, top: 1, right: 0.25 },
+				viewport: { bottom: 0.4, left: 0, top: 1, right: 0.25 },
+				id: "Street View Mini Canvas",
+				visible: false,
+			},
+		];
+
+		// Initial % values for viewport are multiplied by screen dimensions to find the current aspect ratio of the viewport.
+		// Changed to divide by the opposite dimension instead. This is proportionally the same but reduces roundoff.
+		for (let i = 0; i < this.scissorZones.length; i++) {
+			const viewport = this.scissorZones[i].viewport;
+			viewport.bottom /= this.renderArea.clientWidth;
+			viewport.left /= this.renderArea.clientHeight;
+			viewport.top /= this.renderArea.clientWidth;
+			viewport.right /= this.renderArea.clientHeight;
+		}
+
 		this.sceneVR = null;
 		this.overlay = null;
 		this.overlayCamera = null;
 
 		this.inputHandler = null;
-		this.controls = null;
 
 		this.clippingTool =  null;
 		this.transformationTool = null;
@@ -229,6 +287,7 @@ export class Viewer extends EventDispatcher{
 		
 
 		let scene = new Scene(this.renderer);
+		let scene2 = new Scene(this.renderer);
 		
 		{ // create VR scene
 			this.sceneVR = new THREE.Scene();
@@ -246,7 +305,8 @@ export class Viewer extends EventDispatcher{
 			// window.infoNode = infoNode;
 		}
 
-		this.setScene(scene);
+		this.setScene(scene, 0);
+		this.setScene(scene2, 1);
 
 		{
 			this.inputHandler = new InputHandler(this);
@@ -304,12 +364,23 @@ export class Viewer extends EventDispatcher{
 			this.setPointBudget(1*1000*1000);
 			this.setShowBoundingBox(false);
 			this.setFreeze(false);
-			this.setControls(this.orbitControls);
+			this.setControls(this.orbitControls, 0);
+			this.setControls(this.orbitControls2, 1);
 			this.setBackground('gradient');
 
 			this.scaleFactor = 1;
 
 			this.loadSettingsFromURL();
+
+			// Load background texture for mini canvas.
+			const loader = new THREE.TextureLoader();
+			const targetScene = this.scissorZones[1].scene;
+			const viewport = this.scissorZones[1].viewport;
+			loader.load('../../../Screenshot from 2024-05-13 09-34-04.png' , function(texture) {
+				targetScene.scene.background = texture;
+				viewport.right = texture.image.width;
+				viewport.top = texture.image.height;
+			});
 		}
 
 		// start rendering!
@@ -375,17 +446,106 @@ export class Viewer extends EventDispatcher{
 		throw error;
 	}
 
+	// Getters and setters to support old code.
+	get moveSpeed() {
+		if (this.scissorZones.length > 0) return this.scissorZones[0].moveSpeed;
+		else return null;
+	}
+	set moveSpeed(val) {
+		if (this.scissorZones.length > 0) this.scissorZones[0].moveSpeed = val;
+	}
+	get scene() {
+		if (this.scissorZones.length > 0) return this.scissorZones[0].scene;
+		else return null;
+	}
+	set scene(val) {
+		if (this.scissorZones.length > 0) this.scissorZones[0].scene = val;
+	}
+	get controls() {
+		if (this.scissorZones.length > 0) return this.scissorZones[0].controls;
+		else return null;
+	}
+	set controls(val) {
+		if (this.scissorZones.length > 0) this.scissorZones[0].controls = val;
+	}
+
+	// Better getters and setters.
+	getCamera(idx) {
+		const zone = this.scissorZones[idx];
+		return zone.scene.getActiveCamera(zone.viewIdxInScene);
+	}
+	getView(idx) {
+		const zone = this.scissorZones[idx];
+		return zone.scene.views[zone.viewIdxInScene].view;
+	}
+	getScissor(idx, ignoreViewportScissoring = false) {
+		if (!ignoreViewportScissoring && this.scissorZones[idx].viewportScissoring)
+			return this.getViewport(idx);
+
+		const zone = this.scissorZones[idx].scissor;
+		const width = this.renderArea.clientWidth;
+		const height = this.renderArea.clientHeight;
+
+		return new THREE.Vector4(
+			zone.left * width,
+			zone.bottom * height,
+			(zone.right - zone.left) * width,
+			(zone.top - zone.bottom) * height
+		);
+	}
+	getViewport(idx) {
+		const scissor = this.getScissor(idx, true);
+		const viewport = this.scissorZones[idx].viewport;
+		// Call Math.min or Math.max depending on fitInside.
+		let requiredScale = (
+			this.scissorZones[idx].fitInside ? Math.min : Math.max
+		)(
+			scissor.width / (viewport.right - viewport.left),
+			scissor.height / (viewport.top - viewport.bottom)
+		);
+		let viewportScale = [
+			(viewport.right - viewport.left) * requiredScale,
+			(viewport.top - viewport.bottom) * requiredScale,
+		];
+		// Center of the scissor box will be the center of viewport as well.
+		let viewportCenter = [
+			scissor.x + scissor.width / 2,
+			scissor.y + scissor.height / 2,
+		];
+		const width = this.renderArea.clientWidth;
+		const height = this.renderArea.clientHeight;
+		// Makes the mini canvas (idx 1) always go to the top left of avilable space instead of the center.
+		if(idx === 1) {
+			return new THREE.Vector4(
+				0,
+				height - viewportScale[1],
+				viewportScale[0],
+				viewportScale[1]
+			);
+		}
+		return new THREE.Vector4(
+			viewportCenter[0] - viewportScale[0] / 2,
+			viewportCenter[1] - viewportScale[1] / 2,
+			viewportScale[0],
+			viewportScale[1]
+		);
+	}
+
 	// ------------------------------------------------------------------------------------
 	// Viewer API
 	// ------------------------------------------------------------------------------------
 
-	setScene (scene) {
-		if (scene === this.scene) {
+	setScene (scene, idx = 0) {
+		if (idx >= this.scissorZones.length) {
+			console.log("Out of bounds access to scissorZones");
+			return;
+		}
+		if (scene === this.scissorZones[idx].scene) {
 			return;
 		}
 
-		let oldScene = this.scene;
-		this.scene = scene;
+		let oldScene = this.scissorZones[idx].scene;
+		this.scissorZones[idx].scene = scene;
 
 		this.dispatchEvent({
 			type: 'scene_changed',
@@ -400,7 +560,7 @@ export class Viewer extends EventDispatcher{
 			//	this.renderArea.appendChild(annotation.domElement[0]);
 			// }
 
-			this.scene.annotations.traverse(annotation => {
+			this.scissorZones[idx].scene.annotations.traverse(annotation => {
 				this.renderArea.appendChild(annotation.domElement[0]);
 			});
 
@@ -412,7 +572,7 @@ export class Viewer extends EventDispatcher{
 
 						$("#potree_annotation_container").append(node.domElement);
 						//this.renderArea.appendChild(node.domElement[0]);
-						node.scene = this.scene;
+						node.scene = this.scissorZones[idx].scene;
 					});
 				};
 			}
@@ -420,29 +580,34 @@ export class Viewer extends EventDispatcher{
 			if (oldScene) {
 				oldScene.annotations.removeEventListener('annotation_added', this.onAnnotationAdded);
 			}
-			this.scene.annotations.addEventListener('annotation_added', this.onAnnotationAdded);
+			this.scissorZones[idx].scene.annotations.addEventListener('annotation_added', this.onAnnotationAdded);
 		}
 	};
 
-	setControls(controls){
-		if (controls !== this.controls) {
-			if (this.controls) {
-				this.controls.enabled = false;
-				this.inputHandler.removeInputListener(this.controls);
+	setControls(controls, idx = 0){
+		if (idx >= this.scissorZones.length) {
+			console.log("Out of bounds access to scissorZones");
+			return;
+		}
+
+		if (controls !== this.scissorZones[idx].controls) {
+			if (this.scissorZones[idx].controls) {
+				this.scissorZones[idx].controls.enabled = false;
+				this.inputHandler.removeInputListener(this.scissorZones[idx].controls);
 			}
 
-			this.controls = controls;
-			this.controls.enabled = true;
-			this.inputHandler.addInputListener(this.controls);
+			this.scissorZones[idx].controls = controls;
+			this.scissorZones[idx].controls.enabled = true;
+			this.inputHandler.addInputListener(this.scissorZones[idx].controls);
 		}
 	}
 
-	getControls () {
+	getControls (idx = 0) {
 
 		if(this.renderer.xr.isPresenting){
 			return this.vrControls;
 		}else{
-			return this.controls;
+			return this.scissorZones[idx].controls;
 		}
 		
 	}
@@ -497,15 +662,20 @@ export class Viewer extends EventDispatcher{
 		return this.showBoundingBox;
 	};
 
-	setMoveSpeed (value) {
-		if (this.moveSpeed !== value) {
-			this.moveSpeed = value;
-			this.dispatchEvent({'type': 'move_speed_changed', 'viewer': this, 'speed': value});
+	setMoveSpeed (value, idx = 0) {
+		if (idx >= this.scissorZones.length) {
+			console.log("Out of bounds access to scissorZones");
+			return;
+		}
+
+		if (this.scissorZones[idx].moveSpeed !== value) {
+			this.scissorZones[idx].moveSpeed = value;
+			this.dispatchEvent({'type': 'move_speed_changed', 'viewer': this, 'speed': value, 'idx': idx});
 		}
 	};
 
-	getMoveSpeed () {
-		return this.moveSpeed;
+	getMoveSpeed (idx = 0) {
+		return this.scissorZones[idx].moveSpeed;
 	};
 
 	setWeightClassification (w) {
@@ -788,62 +958,66 @@ export class Viewer extends EventDispatcher{
 	};
 
 	zoomTo(node, factor, animationDuration = 0){
-		let view = this.scene.view;
+		for (let scissorIdx = 0; scissorIdx < this.scissorZones.length; scissorIdx++) {
+			let viewHolder = this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx].viewIdxInScene];
+			let view = viewHolder.view;
 
-		let camera = this.scene.cameraP.clone();
-		camera.rotation.copy(this.scene.cameraP.rotation);
-		camera.rotation.order = "ZXY";
-		camera.rotation.x = Math.PI / 2 + view.pitch;
-		camera.rotation.z = view.yaw;
-		camera.updateMatrix();
-		camera.updateMatrixWorld();
-		camera.zoomTo(node, factor);
+			let camera = viewHolder.cameraP.clone();
+			camera.rotation.copy(viewHolder.cameraP.rotation);
+			camera.rotation.order = "ZXY";
+			camera.rotation.x = Math.PI / 2 + view.pitch;
+			camera.rotation.y = view.roll;
+			camera.rotation.z = view.yaw;
+			camera.updateMatrix();
+			camera.updateMatrixWorld();
+			camera.zoomTo(node, factor);
 
-		let bs;
-		if (node.boundingSphere) {
-			bs = node.boundingSphere;
-		} else if (node.geometry && node.geometry.boundingSphere) {
-			bs = node.geometry.boundingSphere;
-		} else {
-			bs = node.boundingBox.getBoundingSphere(new THREE.Sphere());
-		}
-		bs = bs.clone().applyMatrix4(node.matrixWorld); 
+			let bs;
+			if (node.boundingSphere) {
+				bs = node.boundingSphere;
+			} else if (node.geometry && node.geometry.boundingSphere) {
+				bs = node.geometry.boundingSphere;
+			} else {
+				bs = node.boundingBox.getBoundingSphere(new THREE.Sphere());
+			}
+			bs = bs.clone().applyMatrix4(node.matrixWorld); 
 
-		let startPosition = view.position.clone();
-		let endPosition = camera.position.clone();
-		let startTarget = view.getPivot();
-		let endTarget = bs.center;
-		let startRadius = view.radius;
-		let endRadius = endPosition.distanceTo(endTarget);
+			let startPosition = view.position.clone();
+			let endPosition = camera.position.clone();
+			let startTarget = view.getPivot();
+			let endTarget = bs.center;
+			let startRadius = view.radius;
+			let endRadius = endPosition.distanceTo(endTarget);
 
-		let easing = TWEEN.Easing.Quartic.Out;
+			let easing = TWEEN.Easing.Quartic.Out;
 
-		{ // animate camera position
-			let pos = startPosition.clone();
-			let tween = new TWEEN.Tween(pos).to(endPosition, animationDuration);
-			tween.easing(easing);
+			{ // animate camera position
+				let pos = startPosition.clone();
+				let tween = new TWEEN.Tween(pos).to(endPosition, animationDuration);
+				tween.easing(easing);
 
-			tween.onUpdate(() => {
-				view.position.copy(pos);
-			});
+				tween.onUpdate(() => {
+					view.position.copy(pos);
+				});
 
-			tween.start();
-		}
+				tween.start();
+			}
 
-		{ // animate camera target
-			let target = startTarget.clone();
-			let tween = new TWEEN.Tween(target).to(endTarget, animationDuration);
-			tween.easing(easing);
-			tween.onUpdate(() => {
-				view.lookAt(target);
-			});
-			tween.onComplete(() => {
-				view.lookAt(target);
-				this.dispatchEvent({type: 'focusing_finished', target: this});
-			});
+			{ // animate camera target
+				let target = startTarget.clone();
+				let tween = new TWEEN.Tween(target).to(endTarget, animationDuration);
+				tween.easing(easing);
+				tween.onUpdate(() => {
+					view.lookAt(target);
+				});
+				tween.onComplete(() => {
+					view.lookAt(target);
+					this.dispatchEvent({type: 'focusing_finished', target: this});
+				});
 
-			this.dispatchEvent({type: 'focusing_started', target: this});
-			tween.start();
+				this.dispatchEvent({type: 'focusing_started', target: this});
+				tween.start();
+			}
 		}
 	};
 
@@ -887,8 +1061,15 @@ export class Viewer extends EventDispatcher{
 		return range;
 	}
 
-	fitToScreen (factor = 1, animationDuration = 0) {
-		let box = this.getBoundingBox(this.scene.pointclouds);
+	fitToScreen (box = null, factor = 1, animationDuration = 0) {
+		if (box) {
+		} else if (this.scene.pointclouds.length) {
+			box = this.getBoundingBox(this.scene.pointclouds);
+		} else {
+			box = new THREE.Box3();
+			box.min = new THREE.Vector3(40, -20, 0);
+			box.max = new THREE.Vector3(80, 90, 20);
+		}
 
 		let node = new THREE.Object3D();
 		node.boundingBox = box;
@@ -897,75 +1078,75 @@ export class Viewer extends EventDispatcher{
 		this.controls.stop();
 	};
 
-	toggleNavigationCube() {
-		this.navigationCube.visible = !this.navigationCube.visible;
+	toggleNavigationCube(val) {
+		this.navigationCube.visible = val;
 	}
 
-	setView(view) {
+	setView(view, box = null) {
 		if(!view) return;
 
 		switch(view) {
-			case "F":
-				this.setFrontView();
+			case "South":
+				this.setFrontView(box);
 				break;
-			case "B":
-				this.setBackView();
+			case "North":
+				this.setBackView(box);
 				break;
-			case "L":
-				this.setLeftView();
+			case "West":
+				this.setLeftView(box);
 				break;
-			case "R":
-				this.setRightView();
+			case "East":
+				this.setRightView(box);
 				break;
 			case "U":
-				this.setTopView();
+				this.setTopView(box);
 				break;
 			case "D":
-				this.setBottomView();
+				this.setBottomView(box);
 				break;
 		}
 	}
 	
-	setTopView(){
-		this.scene.view.yaw = 0;
-		this.scene.view.pitch = -Math.PI / 2;
+	setTopView(box){
+		this.getView(0).yaw = 0;
+		this.getView(0).pitch = -Math.PI / 2;
 
-		this.fitToScreen();
+		this.fitToScreen(box);
 	};
 	
-	setBottomView(){
-		this.scene.view.yaw = -Math.PI;
-		this.scene.view.pitch = Math.PI / 2;
+	setBottomView(box){
+		this.getView(0).yaw = -Math.PI;
+		this.getView(0).pitch = Math.PI / 2;
 		
-		this.fitToScreen();
+		this.fitToScreen(box);
 	};
 
-	setFrontView(){
-		this.scene.view.yaw = 0;
-		this.scene.view.pitch = 0;
+	setFrontView(box){
+		this.getView(0).yaw = 0;
+		this.getView(0).pitch = 0;
 
-		this.fitToScreen();
+		this.fitToScreen(box);
 	};
 	
-	setBackView(){
-		this.scene.view.yaw = Math.PI;
-		this.scene.view.pitch = 0;
+	setBackView(box){
+		this.getView(0).yaw = Math.PI;
+		this.getView(0).pitch = 0;
 		
-		this.fitToScreen();
+		this.fitToScreen(box);
 	};
 
-	setLeftView(){
-		this.scene.view.yaw = -Math.PI / 2;
-		this.scene.view.pitch = 0;
+	setLeftView(box){
+		this.getView(0).yaw = -Math.PI / 2;
+		this.getView(0).pitch = 0;
 
-		this.fitToScreen();
+		this.fitToScreen(box);
 	};
 
-	setRightView () {
-		this.scene.view.yaw = Math.PI / 2;
-		this.scene.view.pitch = 0;
+	setRightView (box) {
+		this.getView(0).yaw = Math.PI / 2;
+		this.getView(0).pitch = 0;
 
-		this.fitToScreen();
+		this.fitToScreen(box);
 	};
 
 	flipYZ () {
@@ -1128,10 +1309,17 @@ export class Viewer extends EventDispatcher{
 		// }
 
 		{ // create ORBIT CONTROLS
-			this.orbitControls = new OrbitControls(this);
+			this.orbitControls = new OrbitControls(this, [0], true);
 			this.orbitControls.enabled = false;
 			this.orbitControls.addEventListener('start', this.disableAnnotations.bind(this));
 			this.orbitControls.addEventListener('end', this.enableAnnotations.bind(this));
+		}
+
+		{ // create ORBIT CONTROLS 2
+			this.orbitControls2 = new OrbitControls(this, [1], false);
+			this.orbitControls2.enabled = false;
+			this.orbitControls2.addEventListener('start', this.disableAnnotations.bind(this));
+			this.orbitControls2.addEventListener('end', this.enableAnnotations.bind(this));
 		}
 
 		{ // create EARTH CONTROLS
@@ -1438,6 +1626,7 @@ export class Viewer extends EventDispatcher{
 		this.renderer.sortObjects = false;
 		this.renderer.setSize(width, height);
 		this.renderer.autoClear = false;
+		this.renderer.setClearColor(0xffffff);
 		this.renderArea.appendChild(this.renderer.domElement);
 		this.renderer.domElement.tabIndex = '2222';
 		this.renderer.domElement.style.position = 'absolute';
@@ -1620,254 +1809,260 @@ export class Viewer extends EventDispatcher{
 			delta: delta,
 			timestamp: timestamp});
 
-		
-		const scene = this.scene;
-		const camera = scene.getActiveCamera();
-		const visiblePointClouds = this.scene.pointclouds.filter(pc => pc.visible)
-		
-		Potree.pointLoadLimit = Potree.pointBudget * 2;
+		for ( let scissorIdx = 0; scissorIdx < this.scissorZones.length; scissorIdx++ ) {
+			const scene = this.scissorZones[scissorIdx].scene;
+			const camera = this.getCamera(scissorIdx);
+			const visiblePointClouds = scene.pointclouds.filter(pc => pc.visible)
+			
+			Potree.pointLoadLimit = Potree.pointBudget * 2;
 
-		const lTarget = camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000));
-		this.scene.directionalLight.position.copy(camera.position);
-		this.scene.directionalLight.lookAt(lTarget);
+			const lTarget = camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000));
+			this.scissorZones[scissorIdx].scene.directionalLight.position.copy(camera.position);
+			this.scissorZones[scissorIdx].scene.directionalLight.lookAt(lTarget);
 
 
-		for (let pointcloud of visiblePointClouds) {
+			for (let pointcloud of visiblePointClouds) {
 
-			pointcloud.showBoundingBox = this.showBoundingBox;
-			pointcloud.generateDEM = this.generateDEM;
-			pointcloud.minimumNodePixelSize = this.minNodeSize;
+				pointcloud.showBoundingBox = this.showBoundingBox;
+				pointcloud.generateDEM = this.generateDEM;
+				pointcloud.minimumNodePixelSize = this.minNodeSize;
 
-			let material = pointcloud.material;
+				let material = pointcloud.material;
 
-			material.uniforms.uFilterReturnNumberRange.value = this.filterReturnNumberRange;
-			material.uniforms.uFilterNumberOfReturnsRange.value = this.filterNumberOfReturnsRange;
-			material.uniforms.uFilterGPSTimeClipRange.value = this.filterGPSTimeRange;
-			material.uniforms.uFilterPointSourceIDClipRange.value = this.filterPointSourceIDRange;
+				material.uniforms.uFilterReturnNumberRange.value = this.filterReturnNumberRange;
+				material.uniforms.uFilterNumberOfReturnsRange.value = this.filterNumberOfReturnsRange;
+				material.uniforms.uFilterGPSTimeClipRange.value = this.filterGPSTimeRange;
+				material.uniforms.uFilterPointSourceIDClipRange.value = this.filterPointSourceIDRange;
 
-			material.classification = this.classifications;
-			material.recomputeClassification();
+				material.classification = this.classifications;
+				material.recomputeClassification();
 
-			this.updateMaterialDefaults(pointcloud);
-		}
+				this.updateMaterialDefaults(pointcloud);
+			}
 
-		{
-			if(this.showBoundingBox){
-				let bbRoot = this.scene.scene.getObjectByName("potree_bounding_box_root");
-				if(!bbRoot){
-					let node = new THREE.Object3D();
-					node.name = "potree_bounding_box_root";
-					this.scene.scene.add(node);
-					bbRoot = node;
+			{
+				if(this.showBoundingBox){
+					let bbRoot = this.scissorZones[scissorIdx].scene.scene.getObjectByName("potree_bounding_box_root");
+					if(!bbRoot){
+						let node = new THREE.Object3D();
+						node.name = "potree_bounding_box_root";
+						this.scissorZones[scissorIdx].scene.scene.add(node);
+						bbRoot = node;
+					}
+
+					let visibleBoxes = [];
+					for(let pointcloud of this.scissorZones[scissorIdx].scene.pointclouds){
+						for(let node of pointcloud.visibleNodes.filter(vn => vn.boundingBoxNode !== undefined)){
+							let box = node.boundingBoxNode;
+							visibleBoxes.push(box);
+						}
+					}
+
+					bbRoot.children = visibleBoxes;
 				}
+			}
 
-				let visibleBoxes = [];
-				for(let pointcloud of this.scene.pointclouds){
-					for(let node of pointcloud.visibleNodes.filter(vn => vn.boundingBoxNode !== undefined)){
-						let box = node.boundingBoxNode;
-						visibleBoxes.push(box);
+			if (!this.freeze) {
+				let result = Potree.updatePointClouds(scene.pointclouds, camera, this.renderer);
+
+
+				// DEBUG - ONLY DISPLAY NODES THAT INTERSECT MOUSE
+				//if(false){ 
+
+				//	let renderer = viewer.renderer;
+				//	let mouse = viewer.inputHandler.mouse;
+
+				//	let nmouse = {
+				//		x: (mouse.x / renderer.domElement.clientWidth) * 2 - 1,
+				//		y: -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
+				//	};
+
+				//	let pickParams = {};
+
+				//	//if(params.pickClipped){
+				//	//	pickParams.pickClipped = params.pickClipped;
+				//	//}
+
+				//	pickParams.x = mouse.x;
+				//	pickParams.y = renderer.domElement.clientHeight - mouse.y;
+
+				//	let raycaster = new THREE.Raycaster();
+				//	raycaster.setFromCamera(nmouse, camera);
+				//	let ray = raycaster.ray;
+
+				//	for(let pointcloud of scene.pointclouds){
+				//		let nodes = pointcloud.nodesOnRay(pointcloud.visibleNodes, ray);
+				//		pointcloud.visibleNodes = nodes;
+
+				//	}
+				//}
+
+				// const tStart = performance.now();
+				// const worldPos = new THREE.Vector3();
+				// const camPos = viewer.scene.getActiveCamera().getWorldPosition(new THREE.Vector3());
+				// let lowestDistance = Infinity;
+				// let numNodes = 0;
+
+				// viewer.scene.scene.traverse(node => {
+				// 	node.getWorldPosition(worldPos);
+
+				// 	const distance = worldPos.distanceTo(camPos);
+
+				// 	lowestDistance = Math.min(lowestDistance, distance);
+
+				// 	numNodes++;
+
+				// 	if(Number.isNaN(distance)){
+				// 		console.error(":(");
+				// 	}
+				// });
+				// const duration = (performance.now() - tStart).toFixed(2);
+
+				// Potree.debug.computeNearDuration = duration;
+				// Potree.debug.numNodes = numNodes;
+
+				//console.log(lowestDistance.toString(2), duration);
+
+				const tStart = performance.now();
+				const campos = camera.position;
+				let closestImage = Infinity;
+				for(const images of this.scissorZones[scissorIdx].scene.orientedImages){
+					for(const image of images.images){
+						const distance = image.mesh.position.distanceTo(campos);
+
+						closestImage = Math.min(closestImage, distance);
 					}
 				}
+				const tEnd = performance.now();
 
-				bbRoot.children = visibleBoxes;
-			}
-		}
+				if(result.lowestSpacing !== Infinity){
+					let near = result.lowestSpacing * 10.0;
+					let far = -this.getBoundingBox().applyMatrix4(camera.matrixWorldInverse).min.z;
 
-		if (!this.freeze) {
-			let result = Potree.updatePointClouds(scene.pointclouds, camera, this.renderer);
+					far = Math.max(far * 1.5, 10000);
+					near = Math.min(100.0, Math.max(0.01, near));
+					near = Math.min(near, closestImage);
+					far = Math.max(far, near + 10000);
 
-
-			// DEBUG - ONLY DISPLAY NODES THAT INTERSECT MOUSE
-			//if(false){ 
-
-			//	let renderer = viewer.renderer;
-			//	let mouse = viewer.inputHandler.mouse;
-
-			//	let nmouse = {
-			//		x: (mouse.x / renderer.domElement.clientWidth) * 2 - 1,
-			//		y: -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
-			//	};
-
-			//	let pickParams = {};
-
-			//	//if(params.pickClipped){
-			//	//	pickParams.pickClipped = params.pickClipped;
-			//	//}
-
-			//	pickParams.x = mouse.x;
-			//	pickParams.y = renderer.domElement.clientHeight - mouse.y;
-
-			//	let raycaster = new THREE.Raycaster();
-			//	raycaster.setFromCamera(nmouse, camera);
-			//	let ray = raycaster.ray;
-
-			//	for(let pointcloud of scene.pointclouds){
-			//		let nodes = pointcloud.nodesOnRay(pointcloud.visibleNodes, ray);
-			//		pointcloud.visibleNodes = nodes;
-
-			//	}
-			//}
-
-			// const tStart = performance.now();
-			// const worldPos = new THREE.Vector3();
-			// const camPos = viewer.scene.getActiveCamera().getWorldPosition(new THREE.Vector3());
-			// let lowestDistance = Infinity;
-			// let numNodes = 0;
-
-			// viewer.scene.scene.traverse(node => {
-			// 	node.getWorldPosition(worldPos);
-
-			// 	const distance = worldPos.distanceTo(camPos);
-
-			// 	lowestDistance = Math.min(lowestDistance, distance);
-
-			// 	numNodes++;
-
-			// 	if(Number.isNaN(distance)){
-			// 		console.error(":(");
-			// 	}
-			// });
-			// const duration = (performance.now() - tStart).toFixed(2);
-
-			// Potree.debug.computeNearDuration = duration;
-			// Potree.debug.numNodes = numNodes;
-
-			//console.log(lowestDistance.toString(2), duration);
-
-			const tStart = performance.now();
-			const campos = camera.position;
-			let closestImage = Infinity;
-			for(const images of this.scene.orientedImages){
-				for(const image of images.images){
-					const distance = image.mesh.position.distanceTo(campos);
-
-					closestImage = Math.min(closestImage, distance);
+					if(near === Infinity){
+						near = 0.1;
+					}
+					
+					camera.near = near;
+					camera.far = far;
+				}else{
+					// don't change near and far in this case
 				}
+
+				if(this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx].viewIdxInScene].cameraMode == CameraMode.ORTHOGRAPHIC) {
+					camera.near = -camera.far;
+				}
+			} 
+			
+			let cameraP = this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx].viewIdxInScene].cameraP;
+			let cameraO = this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx].viewIdxInScene].cameraO;
+			cameraP.fov = this.fov;
+			
+			let controls = this.getControls(scissorIdx);
+			if (controls === this.deviceControls) {
+				this.scissorZones[idx].controls.setScene(scene);
+				this.scissorZones[idx].controls.update(delta);
+
+				cameraP.position.copy(this.getView(scissorIdx).position);
+				cameraO.position.copy(this.getView(scissorIdx).position);
+			} else if (controls !== null) {
+				controls.setScene(scene);
+				controls.update(delta);
+
+				// "YZX" looks better than "ZXY" now that Y rotation can be nonzero.
+				if(typeof debugDisabled === "undefined" ){
+					cameraP.position.copy(this.getView(scissorIdx).position);
+					cameraP.rotation.order = "YZX";
+					cameraP.rotation.x = Math.PI / 2 + this.getView(scissorIdx).pitch;
+					cameraP.rotation.y = this.getView(scissorIdx).roll;
+					cameraP.rotation.z = this.getView(scissorIdx).yaw;
+				}
+
+				cameraO.position.copy(this.getView(scissorIdx).position);
+				cameraO.rotation.order = "YZX";
+				cameraO.rotation.x = Math.PI / 2 + this.getView(scissorIdx).pitch;
+				cameraO.rotation.y = this.getView(scissorIdx).roll;
+				cameraO.rotation.z = this.getView(scissorIdx).yaw;
 			}
-			const tEnd = performance.now();
+			
+			camera.updateMatrix();
+			camera.updateMatrixWorld();
+			camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
 
-			if(result.lowestSpacing !== Infinity){
-				let near = result.lowestSpacing * 10.0;
-				let far = -this.getBoundingBox().applyMatrix4(camera.matrixWorldInverse).min.z;
+			{
+				if(this._previousCamera === undefined){
+					this._previousCamera = this.getCamera(scissorIdx).clone();
+					this._previousCamera.rotation.copy(this.getCamera(scissorIdx).rotation);
+				}
 
-				far = Math.max(far * 1.5, 10000);
-				near = Math.min(100.0, Math.max(0.01, near));
-				near = Math.min(near, closestImage);
-				far = Math.max(far, near + 10000);
+				if(!this._previousCamera.matrixWorld.equals(camera.matrixWorld)){
+					this.dispatchEvent({
+						type: "camera_changed",
+						previous: this._previousCamera,
+						camera: camera
+					});
+				}else if(!this._previousCamera.projectionMatrix.equals(camera.projectionMatrix)){
+					this.dispatchEvent({
+						type: "camera_changed",
+						previous: this._previousCamera,
+						camera: camera
+					});
+				}
 
-				if(near === Infinity){
-					near = 0.1;
+				this._previousCamera = this.getCamera(scissorIdx).clone();
+				this._previousCamera.rotation.copy(this.getCamera(scissorIdx).rotation);
+
+			}
+
+			{ // update clip boxes
+				let boxes = [];
+				
+				// volumes with clipping enabled
+				//boxes.push(...this.scissorZones[scissorIdx].scene.volumes.filter(v => (v.clip)));
+				boxes.push(...this.scissorZones[scissorIdx].scene.volumes.filter(v => (v.clip && v instanceof BoxVolume)));
+
+				// profile segments
+				for(let profile of this.scissorZones[scissorIdx].scene.profiles){
+					boxes.push(...profile.boxes);
 				}
 				
-				camera.near = near;
-				camera.far = far;
-			}else{
-				// don't change near and far in this case
-			}
-
-			if(this.scene.cameraMode == CameraMode.ORTHOGRAPHIC) {
-				camera.near = -camera.far;
-			}
-		} 
-		
-		this.scene.cameraP.fov = this.fov;
-		
-		let controls = this.getControls();
-		if (controls === this.deviceControls) {
-			this.controls.setScene(scene);
-			this.controls.update(delta);
-
-			this.scene.cameraP.position.copy(scene.view.position);
-			this.scene.cameraO.position.copy(scene.view.position);
-		} else if (controls !== null) {
-			controls.setScene(scene);
-			controls.update(delta);
-
-			if(typeof debugDisabled === "undefined" ){
-				this.scene.cameraP.position.copy(scene.view.position);
-				this.scene.cameraP.rotation.order = "ZXY";
-				this.scene.cameraP.rotation.x = Math.PI / 2 + this.scene.view.pitch;
-				this.scene.cameraP.rotation.z = this.scene.view.yaw;
-			}
-
-			this.scene.cameraO.position.copy(scene.view.position);
-			this.scene.cameraO.rotation.order = "ZXY";
-			this.scene.cameraO.rotation.x = Math.PI / 2 + this.scene.view.pitch;
-			this.scene.cameraO.rotation.z = this.scene.view.yaw;
-		}
-		
-		camera.updateMatrix();
-		camera.updateMatrixWorld();
-		camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
-
-		{
-			if(this._previousCamera === undefined){
-				this._previousCamera = this.scene.getActiveCamera().clone();
-				this._previousCamera.rotation.copy(this.scene.getActiveCamera().rotation);
-			}
-
-			if(!this._previousCamera.matrixWorld.equals(camera.matrixWorld)){
-				this.dispatchEvent({
-					type: "camera_changed",
-					previous: this._previousCamera,
-					camera: camera
-				});
-			}else if(!this._previousCamera.projectionMatrix.equals(camera.projectionMatrix)){
-				this.dispatchEvent({
-					type: "camera_changed",
-					previous: this._previousCamera,
-					camera: camera
-				});
-			}
-
-			this._previousCamera = this.scene.getActiveCamera().clone();
-			this._previousCamera.rotation.copy(this.scene.getActiveCamera().rotation);
-
-		}
-
-		{ // update clip boxes
-			let boxes = [];
-			
-			// volumes with clipping enabled
-			//boxes.push(...this.scene.volumes.filter(v => (v.clip)));
-			boxes.push(...this.scene.volumes.filter(v => (v.clip && v instanceof BoxVolume)));
-
-			// profile segments
-			for(let profile of this.scene.profiles){
-				boxes.push(...profile.boxes);
-			}
-			
-			// Needed for .getInverse(), pre-empt a determinant of 0, see #815 / #816
-			let degenerate = (box) => box.matrixWorld.determinant() !== 0;
-			
-			let clipBoxes = boxes.filter(degenerate).map( box => {
-				box.updateMatrixWorld();
+				// Needed for .getInverse(), pre-empt a determinant of 0, see #815 / #816
+				let degenerate = (box) => box.matrixWorld.determinant() !== 0;
 				
-				let boxInverse = box.matrixWorld.clone().invert();
-				let boxPosition = box.getWorldPosition(new THREE.Vector3());
+				let clipBoxes = boxes.filter(degenerate).map( box => {
+					box.updateMatrixWorld();
+					
+					let boxInverse = box.matrixWorld.clone().invert();
+					let boxPosition = box.getWorldPosition(new THREE.Vector3());
 
-				return {box: box, inverse: boxInverse, position: boxPosition};
-			});
+					return {box: box, inverse: boxInverse, position: boxPosition};
+				});
 
-			let clipPolygons = this.scene.polygonClipVolumes.filter(vol => vol.initialized);
+				let clipPolygons = this.scissorZones[scissorIdx].scene.polygonClipVolumes.filter(vol => vol.initialized);
+				
+				// set clip volumes in material
+				for(let pointcloud of visiblePointClouds){
+					pointcloud.material.setClipBoxes(clipBoxes);
+					pointcloud.material.setClipPolygons(clipPolygons, this.clippingTool.maxPolygonVertices);
+					pointcloud.material.clipTask = this.clipTask;
+					pointcloud.material.clipMethod = this.clipMethod;
+				}
+			}
+
+			{
+				for(let pointcloud of visiblePointClouds){
+					pointcloud.material.elevationGradientRepeat = this.elevationGradientRepeat;
+				}
+			}
 			
-			// set clip volumes in material
-			for(let pointcloud of visiblePointClouds){
-				pointcloud.material.setClipBoxes(clipBoxes);
-				pointcloud.material.setClipPolygons(clipPolygons, this.clippingTool.maxPolygonVertices);
-				pointcloud.material.clipTask = this.clipTask;
-				pointcloud.material.clipMethod = this.clipMethod;
+			{ // update navigation cube, only for the first scissor zone in the list
+				if (scissorIdx == 0) this.navigationCube.update(camera.rotation);
 			}
-		}
-
-		{
-			for(let pointcloud of visiblePointClouds){
-				pointcloud.material.elevationGradientRepeat = this.elevationGradientRepeat;
-			}
-		}
-		
-		{ // update navigation cube
-			this.navigationCube.update(camera.rotation);
 		}
 
 		this.updateAnnotations();
@@ -2081,35 +2276,82 @@ export class Viewer extends EventDispatcher{
 	renderDefault(){
 		let pRenderer = this.getPRenderer();
 
-		{ // resize
-			const width = this.scaleFactor * this.renderArea.clientWidth;
-			const height = this.scaleFactor * this.renderArea.clientHeight;
+		const width = this.scaleFactor * this.renderArea.clientWidth;
+		const height = this.scaleFactor * this.renderArea.clientHeight;
 
+		{ // resize
 			this.renderer.setSize(width, height);
 			const pixelRatio = this.renderer.getPixelRatio();
-			const aspect = width / height;
 
-			const scene = this.scene;
+			for (let scissorZoneIdx = 0; scissorZoneIdx < this.scissorZones.length; scissorZoneIdx++) {
+				const viewport = this.getViewport(scissorZoneIdx);
+				const aspect = viewport.width / viewport.height;
 
-			scene.cameraP.aspect = aspect;
-			scene.cameraP.updateProjectionMatrix();
+				const scene = this.scissorZones[scissorZoneIdx].scene;
+				let cameraHolder = scene.views[this.scissorZones[scissorZoneIdx].viewIdxInScene];
 
-			let frustumScale = this.scene.view.radius;
-			scene.cameraO.left = -frustumScale;
-			scene.cameraO.right = frustumScale;
-			scene.cameraO.top = frustumScale * 1 / aspect;
-			scene.cameraO.bottom = -frustumScale * 1 / aspect;
-			scene.cameraO.updateProjectionMatrix();
+				scene.cameraP.aspect = aspect;
+				scene.cameraP.updateProjectionMatrix();
 
-			scene.cameraScreenSpace.top = 1/aspect;
-			scene.cameraScreenSpace.bottom = -1/aspect;
-			scene.cameraScreenSpace.updateProjectionMatrix();
+				let frustumScale = this.getView(scissorZoneIdx).radius;
+				cameraHolder.cameraO.left = -frustumScale;
+				cameraHolder.cameraO.right = frustumScale;
+				cameraHolder.cameraO.top = frustumScale * 1 / aspect;
+				cameraHolder.cameraO.bottom = -frustumScale * 1 / aspect;
+				cameraHolder.cameraO.updateProjectionMatrix();
+
+				scene.cameraScreenSpace.top = 1/aspect;
+				scene.cameraScreenSpace.bottom = -1/aspect;
+				scene.cameraScreenSpace.updateProjectionMatrix();
+			}
 		}
 
-		pRenderer.clear();
+		// Clear full canvas
+		this.renderer.setScissor(0,0,width,height);
+		this.renderer.clear();
 
-		pRenderer.render(this.renderer);
-		this.renderer.render(this.overlay, this.overlayCamera);
+		for (let scissorZoneIdx = 0; scissorZoneIdx < this.scissorZones.length; scissorZoneIdx++) {
+			const zone = this.scissorZones[scissorZoneIdx];
+			if(!zone.visible)
+				continue;
+			if(zone.scissor.top < zone.scissor.bottom || zone.scissor.right < zone.scissor.left)
+				continue;
+			this.renderer.setScissor(this.getScissor(scissorZoneIdx));
+			this.renderer.setViewport(this.getViewport(scissorZoneIdx));
+			this.renderer.setScissorTest(true);
+			// Code for making two mini canvases render the same scene
+			// but one of them toggles the visible and _visible properties of some items.
+			/*
+			let objectsToRestoreVisible = [];
+			let objectsToRestore_Visible = [];
+			if(scissorZoneIdx == 1) {
+				let object360 = this.scissorZones[scissorZoneIdx].scene.images360?.[0]?.node;
+				for(let i = 0; i < this.scissorZones[scissorZoneIdx].scene.scene.children.length; i++) {
+					let child = this.scissorZones[scissorZoneIdx].scene.scene.children[i];
+					if(child.visible && child != object360) {
+						child.visible = false;
+						objectsToRestoreVisible.push(child);
+					}
+				}
+				for(let i = 0; i < this.scissorZones[scissorZoneIdx].scene.pointclouds.length; i++) {
+					let child = this.scissorZones[scissorZoneIdx].scene.pointclouds[i];
+					if(child._visible) {
+						child._visible = false;
+						objectsToRestore_Visible.push(child);
+					}
+				}
+			}
+			*/
+
+			pRenderer.render(this.renderer, scissorZoneIdx);
+			/*
+			for(let i = 0; i < objectsToRestoreVisible.length; i++)
+				objectsToRestoreVisible[i].visible = true;
+			for(let i = 0; i < objectsToRestore_Visible.length; i++)
+				objectsToRestore_Visible[i]._visible = true;
+			*/
+			this.renderer.render(this.overlay, this.overlayCamera);
+		}
 	}
 	
 	render(){

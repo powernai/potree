@@ -21,13 +21,18 @@ import {EventDispatcher} from "../EventDispatcher.js";
  
 export class OrbitControls extends EventDispatcher{
 	
-	constructor(viewer){
+	constructor(viewer, scissorZoneIdxs = [0], allowRotation = true){
 		super();
 		
 		this.viewer = viewer;
 		this.renderer = viewer.renderer;
 
 		this.scene = null;
+		// OrbitControls listens to all scissorzone idxs in this array.
+		// Maybe this could be changed to just listen to zones that have controls == this.
+		this.scissorZoneIdxs = scissorZoneIdxs;
+		// allowRotation=false means that only horizontal mouse drag rotation is allowed, no vertical/scroll rotation.
+		this.allowRotation = allowRotation;
 		this.sceneControls = new THREE.Scene();
 
 		this.rotationSpeed = 5;
@@ -35,15 +40,22 @@ export class OrbitControls extends EventDispatcher{
 		this.fadeFactor = 20;
 		this.yawDelta = 0;
 		this.pitchDelta = 0;
-		this.panDelta = new THREE.Vector2(0, 0);
-		this.radiusDelta = 0;
+		// Added third rotation delta.
+		this.rollDelta = 0;
+		// Merged radiusDelta with panDelta to make translationDelta.
+		// Previously, radiusDelta was different from panDeltas
+		// because radiusDelta described camera offset with respect to pivot+objects,
+		// while panDelta described camera+pivot offset with respect to objects.
+		// But now they are the same because they all describe camera offset with respect to pivot+objects,
+		// so it makes more sense to handle them together.
+		this.translationDelta = new THREE.Vector3(0, 0, 0);
 
 		this.doubleClockZoomEnabled = true;
 
 		this.tweens = [];
 
 		let drag = (e) => {
-			if (e.drag.object !== null) {
+			if (e.drag.object !== null || !this.scissorZoneIdxs.includes(e.drag.scissorZoneIdx)) {
 				return;
 			}
 
@@ -60,12 +72,13 @@ export class OrbitControls extends EventDispatcher{
 
 			if (e.drag.mouse === MOUSE.LEFT) {
 				this.yawDelta += ndrag.x * this.rotationSpeed;
-				this.pitchDelta += ndrag.y * this.rotationSpeed;
+				if (this.allowRotation)
+					this.pitchDelta += ndrag.y * this.rotationSpeed;
 
 				this.stopTweens();
 			} else if (e.drag.mouse === MOUSE.RIGHT) {
-				this.panDelta.x += ndrag.x;
-				this.panDelta.y += ndrag.y;
+				this.translationDelta.x += ndrag.x;
+				this.translationDelta.z += ndrag.y;
 
 				this.stopTweens();
 			}
@@ -76,15 +89,23 @@ export class OrbitControls extends EventDispatcher{
 		};
 
 		let scroll = (e) => {
-			let resolvedRadius = this.scene.view.radius + this.radiusDelta;
-
-			this.radiusDelta += -e.delta * resolvedRadius * 0.1;
+			if (!this.scissorZoneIdxs.includes(e.scissorZoneIdx)) return;
+			// Added left click scroll for 3rd rotation axis.
+			if (e.buttons === MOUSE.LEFT) {
+				if (!this.allowRotation) return;
+				// Rotation 3
+				this.rollDelta += e.delta * this.rotationSpeed * 0.05;
+			}
+			// Pan 3
+			// No need to use current radius to scale the delta here. That occurs in translation handling later.
+			else this.translationDelta.y += e.delta * 0.05;
 
 			this.stopTweens();
+			this.dispatchEvent({ type: "end" });
 		};
 
 		let dblclick = (e) => {
-			if(this.doubleClockZoomEnabled){
+			if(this.scissorZoneIdxs.includes(e.scissorZoneIdx) && this.doubleClockZoomEnabled){
 				this.zoomToLocation(e.mouse);
 			}
 		};
@@ -111,10 +132,10 @@ export class OrbitControls extends EventDispatcher{
 				let currDY = curr.touches[0].pageY - curr.touches[1].pageY;
 				let currDist = Math.sqrt(currDX * currDX + currDY * currDY);
 
-				let delta = currDist / prevDist;
-				let resolvedRadius = this.scene.view.radius + this.radiusDelta;
-				let newRadius = resolvedRadius / delta;
-				this.radiusDelta = newRadius - resolvedRadius;
+				// Added div by 0 check
+				if (prevDist != 0)
+					// No need to use current radius to scale the delta here. That occurs in translation handling later.
+					this.translationDelta.y -= currDist / prevDist - 1;
 
 				this.stopTweens();
 			}else if(e.touches.length === 3 && previousTouch.touches.length === 3){
@@ -132,8 +153,8 @@ export class OrbitControls extends EventDispatcher{
 					y: (currMeanY - prevMeanY) / this.renderer.domElement.clientHeight
 				};
 
-				this.panDelta.x += delta.x;
-				this.panDelta.y += delta.y;
+				this.translationDelta.x += delta.x;
+				this.translationDelta.z += delta.y;
 
 				this.stopTweens();
 			}
@@ -157,39 +178,58 @@ export class OrbitControls extends EventDispatcher{
 	stop(){
 		this.yawDelta = 0;
 		this.pitchDelta = 0;
-		this.radiusDelta = 0;
-		this.panDelta.set(0, 0);
+		this.rollDelta = 0;
+		this.translationDelta.set(0, 0, 0);
 	}
 	
 	zoomToLocation(mouse){
-		let camera = this.scene.getActiveCamera();
+		let camera;
 		
-		let I = Utils.getMousePointCloudIntersection(
-			mouse,
-			camera,
-			this.viewer,
-			this.scene.pointclouds,
-			{pickClipped: true});
+		let I;
+		let i;
+		for (i = 0; i < this.scissorZoneIdxs.length; i++) {
+			if (!this.viewer.scissorZones[this.scissorZoneIdxs[i]].visible)
+				continue;
+			camera = this.viewer.getCamera(this.scissorZoneIdxs[i]);
 
-		if (I === null) {
+			I = Utils.getMousePointCloudIntersection(
+				mouse,
+				camera,
+				this.viewer,
+				this.scene.pointclouds,
+				{pickClipped: true},
+				this.scissorZoneIdxs[i]
+			);
+			if (I) break;
+		}
+
+		if (!I) {
 			return;
 		}
 
+		let view = this.viewer.getView(this.scissorZoneIdxs[i]);
 		let targetRadius = 0;
 		{
 			let minimumJumpDistance = 0.2;
 
 			let domElement = this.renderer.domElement;
-			let ray = Utils.mouseToRay(mouse, camera, domElement.clientWidth, domElement.clientHeight);
+			let ray = Utils.mouseToRay(
+				mouse,
+				camera,
+				domElement.clientWidth,
+				domElement.clientHeight,
+				this.viewer.getScissor(this.scissorZoneIdxs[i]),
+				this.viewer.getViewport(this.scissorZoneIdxs[i])
+			);
 
 			let nodes = I.pointcloud.nodesOnRay(I.pointcloud.visibleNodes, ray);
 			let lastNode = nodes[nodes.length - 1];
 			let radius = lastNode.getBoundingSphere(new THREE.Sphere()).radius;
-			targetRadius = Math.min(this.scene.view.radius, radius);
+			targetRadius = Math.min(view.radius, radius);
 			targetRadius = Math.max(minimumJumpDistance, targetRadius);
 		}
 
-		let d = this.scene.view.direction.multiplyScalar(-1);
+		let d = view.direction.multiplyScalar(-1);
 		let cameraTargetPosition = new THREE.Vector3().addVectors(I.location, d.multiplyScalar(targetRadius));
 		// TODO Unused: let controlsTargetPosition = I.location;
 
@@ -202,23 +242,35 @@ export class OrbitControls extends EventDispatcher{
 			tween.easing(easing);
 			this.tweens.push(tween);
 
-			let startPos = this.scene.view.position.clone();
+			let startPos = view.position.clone();
 			let targetPos = cameraTargetPosition.clone();
-			let startRadius = this.scene.view.radius;
+
+			let startSideOffset = view.sideOffset;
+			let startRadius = view.radius;
+			let startUpOffset = view.upOffset;
+
+			let targetSideOffset = 0;
 			let targetRadius = cameraTargetPosition.distanceTo(I.location);
+			let targetUpOffset = 0;
 
 			tween.onUpdate(() => {
 				let t = value.x;
-				this.scene.view.position.x = (1 - t) * startPos.x + t * targetPos.x;
-				this.scene.view.position.y = (1 - t) * startPos.y + t * targetPos.y;
-				this.scene.view.position.z = (1 - t) * startPos.z + t * targetPos.z;
+				view.position.x = (1 - t) * startPos.x + t * targetPos.x;
+				view.position.y = (1 - t) * startPos.y + t * targetPos.y;
+				view.position.z = (1 - t) * startPos.z + t * targetPos.z;
 
-				this.scene.view.radius = (1 - t) * startRadius + t * targetRadius;
-				this.viewer.setMoveSpeed(this.scene.view.radius);
+				view.sideOffset = (1 - t) * startSideOffset + t * targetSideOffset;
+				view.radius = (1 - t) * startRadius + t * targetRadius;
+				view.upOffset = (1 - t) * startUpOffset + t * targetUpOffset;
+				this.viewer.setMoveSpeed(view.radius);
 			});
 
 			tween.onComplete(() => {
 				this.tweens = this.tweens.filter(e => e !== tween);
+				// Move the pivot indicator sphere from the Move Pivot tool.
+				const sphere = this.scene.scene.children.find((x) => x.isPivotIndicatorSphere);
+				if(sphere)
+					sphere.position.copy(this.scene.view.getPivot());
 			});
 
 			tween.start();
@@ -231,64 +283,73 @@ export class OrbitControls extends EventDispatcher{
 	}
 
 	update (delta) {
-		let view = this.scene.view;
+		for (let i = 0; i < this.scissorZoneIdxs.length; i++) {
+			let view = this.viewer.getView(this.scissorZoneIdxs[i]);
 
-		{ // apply rotation
-			let progression = Math.min(1, this.fadeFactor * delta);
+			{ // apply rotation
+				let progression = Math.min(1, this.fadeFactor * delta);
 
-			let yaw = view.yaw;
-			let pitch = view.pitch;
-			let pivot = view.getPivot();
+				let yaw = view.yaw;
+				let pitch = view.pitch;
+				let roll = view.roll;
+				let pivot = view.getPivot();
 
-			yaw -= progression * this.yawDelta;
-			pitch -= progression * this.pitchDelta;
+				yaw -= progression * this.yawDelta;
+				pitch -= progression * this.pitchDelta;
+				roll -= progression * this.rollDelta;
 
-			view.yaw = yaw;
-			view.pitch = pitch;
+				view.yaw = yaw;
+				view.pitch = pitch;
+				view.roll = roll;
 
-			let V = this.scene.view.direction.multiplyScalar(-view.radius);
-			let position = new THREE.Vector3().addVectors(pivot, V);
+				// 3 dimensions of offset rather than just radius
+				let position = pivot
+					.add(view.getSide().multiplyScalar(-view.sideOffset))
+					.add(view.direction.multiplyScalar(-view.radius))
+					.add(view.getUp().multiplyScalar(-view.upOffset));
 
-			view.position.copy(position);
-		}
+				view.position.copy(position);
+			}
 
-		{ // apply pan
-			let progression = Math.min(1, this.fadeFactor * delta);
-			let panDistance = progression * view.radius * 3;
+			{ // apply translation
+				let progression = Math.min(1, this.fadeFactor * delta);
+				let translationDistance = progression * view.radius * 2;
 
-			let px = -this.panDelta.x * panDistance;
-			let py = this.panDelta.y * panDistance;
+				let tx = -this.translationDelta.x * translationDistance;
+				let ty = this.translationDelta.y * translationDistance;
+				let tz = this.translationDelta.z * translationDistance;
 
-			view.pan(px, py);
-		}
+				view.translate(tx, ty, tz);
+			}
 
-		{ // apply zoom
-			let progression = Math.min(1, this.fadeFactor * delta);
+			// Removed "apply zoom" because it is merged with apply pan to make apply translation as explained above.
+			// { // apply zoom
+			// 	let progression = Math.min(1, this.fadeFactor * delta);
 
-			// let radius = view.radius + progression * this.radiusDelta * view.radius * 0.1;
-			let radius = view.radius + progression * this.radiusDelta;
+			// 	// let radius = view.radius + progression * this.radiusDelta * view.radius * 0.1;
+			// 	let radius = view.radius + progression * this.radiusDelta;
 
-			let V = view.direction.multiplyScalar(-radius);
-			let position = new THREE.Vector3().addVectors(view.getPivot(), V);
-			view.radius = radius;
+			// 	let V = view.direction.multiplyScalar(-radius);
+			// 	let position = new THREE.Vector3().addVectors(view.getPivot(), V);
+			// 	view.radius = radius;
 
-			view.position.copy(position);
-		}
+			// 	view.position.copy(position);
+			// }
 
-		{
-			let speed = view.radius;
-			this.viewer.setMoveSpeed(speed);
-		}
+			{
+				let speed = view.radius;
+				this.viewer.setMoveSpeed(speed);
+			}
 
-		{ // decelerate over time
-			let progression = Math.min(1, this.fadeFactor * delta);
-			let attenuation = Math.max(0, 1 - this.fadeFactor * delta);
+			{ // decelerate over time
+				let progression = Math.min(1, this.fadeFactor * delta);
+				let attenuation = Math.max(0, 1 - this.fadeFactor * delta);
 
-			this.yawDelta *= attenuation;
-			this.pitchDelta *= attenuation;
-			this.panDelta.multiplyScalar(attenuation);
-			// this.radiusDelta *= attenuation;
-			this.radiusDelta -= progression * this.radiusDelta;
+				this.yawDelta *= attenuation;
+				this.pitchDelta *= attenuation;
+				this.rollDelta *= attenuation;
+				this.translationDelta.multiplyScalar(attenuation);
+			}
 		}
 	}
 };

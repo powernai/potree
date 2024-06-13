@@ -248,10 +248,10 @@ export class Utils {
 		return worker;
 	};
 
-	static moveTo(scene, endPosition, endTarget){
+	static moveTo(scene, endPosition, endTarget, i = 0){
 
-		let view = scene.view;
-		let camera = scene.getActiveCamera();
+		let view = scene.viewer.getView(i);
+		let camera = scene.viewer.getCamera(i);
 		let animationDuration = 500;
 		let easing = TWEEN.Easing.Quartic.Out;
 
@@ -396,14 +396,25 @@ export class Utils {
 		return texture;
 	}
 
-	static getMousePointCloudIntersection (mouse, camera, viewer, pointclouds, params = {}) {
+	// Added scissorZoneIdx: can treat the mouse coordinates as relative to a scissor zone instead of the full canvas.
+	static getMousePointCloudIntersection (mouse, camera, viewer, pointclouds, params = {}, scissorZoneIdx = -1) {
 		
 		let renderer = viewer.renderer;
 		
-		let nmouse = {
-			x: (mouse.x / renderer.domElement.clientWidth) * 2 - 1,
-			y: -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
-		};
+		let nmouse;
+		if(scissorZoneIdx != -1) {
+			// Mouse coordinates with (-1,-1) at the bottom left of the viewport zone and (1,1) at the top right
+			const viewport = viewer.getViewport(scissorZoneIdx);
+			nmouse = {
+				x: ((mouse.x - viewport.x) / viewport.width) * 2 - 1,
+				y: (((renderer.domElement.clientHeight - mouse.y) - viewport.y) / viewport.height) * 2 - 1
+			}
+		} else {
+			nmouse = {
+				x: (mouse.x / renderer.domElement.clientWidth) * 2 - 1,
+				y: -(mouse.y / renderer.domElement.clientHeight) * 2 + 1,
+			};
+		}
 
 		let pickParams = {};
 
@@ -539,11 +550,21 @@ export class Utils {
 		}
 	}
 
-	static mouseToRay(mouse, camera, width, height){
+	static mouseToRay(mouse, camera, width, height, scissor, viewport = {x: 0, y: 0, width: width, height: height}){
+		// Check that it is within scissor zone.
+		if (scissor)
+			if (
+				mouse.x < scissor.x ||
+				mouse.x > scissor.x + scissor.width ||
+				height - mouse.y < scissor.y ||
+				height - mouse.y > scissor.y + scissor.height
+			)
+				return null;
 
+		// Position with respect to viewport instead of canvas.
 		let normalizedMouse = {
-			x: (mouse.x / width) * 2 - 1,
-			y: -(mouse.y / height) * 2 + 1
+			x: ((mouse.x - viewport.x) / viewport.width) * 2 - 1,
+			y: (((height - mouse.y) - viewport.y) / viewport.height) * 2 - 1
 		};
 
 		let vector = new THREE.Vector3(normalizedMouse.x, normalizedMouse.y, 0.5);

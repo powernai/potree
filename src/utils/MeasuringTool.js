@@ -373,6 +373,22 @@ export class MeasuringTool extends EventDispatcher{
 				label.scale.set(scale, scale, scale);
 			}
 
+			{
+				// volume label
+				let label = measure.volumeLabel;
+				let distance = label.position.distanceTo(camera.position);
+				let pr = Utils.projectedRadius(
+					1,
+					camera,
+					distance,
+					clientWidth,
+					clientHeight
+				);
+
+				let scale = 70/pr;
+				label.scale.set(scale, scale, scale);
+			}
+
 			{ // radius label
 				let label = measure.circleRadiusLabel;
 				let distance = label.position.distanceTo(camera.position);
@@ -404,6 +420,7 @@ export class MeasuringTool extends EventDispatcher{
 					...measure.coordinateLabels,
 					measure.heightLabel,
 					measure.areaLabel,
+					measure.volumeLabel,
 					measure.circleRadiusLabel,
 				];
 

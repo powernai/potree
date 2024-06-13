@@ -228,7 +228,7 @@ export class OrientedImageLoader{
 		return imageParams;
 	}
 
-	static async load(cameraParamsPath, imageParamsPath, viewer){
+	static async load(cameraParamsPath, imageParamsPath, viewer, callback){
 
 		const tStart = performance.now();
 
@@ -237,7 +237,7 @@ export class OrientedImageLoader{
 			OrientedImageLoader.loadImageParams(imageParamsPath),
 		]);
 
-		const orientedImageControls = new OrientedImageControls(viewer);
+		const orientedImageControls = new OrientedImageControls(viewer, callback);
 		const raycaster = new THREE.Raycaster();
 
 		const tEnd = performance.now();
@@ -268,7 +268,9 @@ export class OrientedImageLoader{
 		
 		let moveToAction = (image)=>{};
 
+		let clicked = false;
 		const onMouseMove = (evt) => {
+			clicked = false;
 			const tStart = performance.now();
 			if(hoveredElement){
 				hoveredElement.line.material.color.setRGB(1, 1, 1);
@@ -278,23 +280,55 @@ export class OrientedImageLoader{
 			//var array = getMousePosition( container, evt.clientX, evt.clientY );
 			const rect = viewer.renderer.domElement.getBoundingClientRect();
 			const [x, y] = [evt.clientX, evt.clientY];
-			const array = [ 
-				( x - rect.left ) / rect.width, 
-				( y - rect.top ) / rect.height 
-			];
-			const onClickPosition = new THREE.Vector2(...array);
+			// Get pixel position with respect to the canvas.
+			const mouse = new THREE.Vector2(
+				x - rect.left,
+				rect.bottom - y
+			);
 			//const intersects = getIntersects(onClickPosition, scene.children);
 			const camera = viewer.scene.getActiveCamera();
-			const mouse = new THREE.Vector3(
-				+ ( onClickPosition.x * 2 ) - 1, 
-				- ( onClickPosition.y * 2 ) + 1 );
+
+			// Find the mini canvas containing the camera that the raycasts will be made with respect to.
+			let scissorWithImages;
+			for (scissorWithImages = viewer.scissorZones.length - 1; scissorWithImages >= 0; scissorWithImages--) {
+				if (camera == viewer.getCamera(scissorWithImages))
+					break;
+			}
+
+			// Find the mini canvas containing the mouse.
+			// Backwards loop so the last rendered canvas (the one on top) catches the mouse in case of an overlap.
+			let scissorWithMouse;
+			for (scissorWithMouse = viewer.scissorZones.length - 1; scissorWithMouse >= 0; scissorWithMouse--) {
+				if (!viewer.scissorZones[scissorWithMouse].visible)
+					continue;
+				const scissor = viewer.getScissor(scissorWithMouse);
+				if (
+					mouse.x >= scissor.x &&
+					mouse.x <= scissor.x + scissor.width &&
+					mouse.y >= scissor.y &&
+					mouse.y <= scissor.y + scissor.height
+				)
+					break;
+			}
+
+			// Determine if the mini canvas containing the mouse also contains the 2D images.
+			const correctScissor = scissorWithMouse == scissorWithImages && scissorWithMouse != -1;
+
+			// Convert to coordinates with (-1,-1) at the bottom left and (1,1) at the top right of the viewport.
+			const viewport = viewer.getViewport(scissorWithImages);
+			mouse
+				.sub(new THREE.Vector2(viewport.x, viewport.y))
+				.divide(new THREE.Vector2(viewport.width, viewport.height))
+				.multiplyScalar(2)
+				.sub(new THREE.Vector2(1, 1));
+
 			const objects = orientedImages.map(i => i.mesh);
 			raycaster.setFromCamera( mouse, camera );
 			const intersects = raycaster.intersectObjects( objects );
 			let selectionChanged = false;
 
 			//added images._visible to trigger that
-			if ( intersects.length > 0 && images._visible === true){
+			if ( intersects.length > 0 && images._visible === true && correctScissor){
 				//console.log(intersects);
 				const intersection = intersects[0];
 				const orientedImage = intersection.object.orientedImage;
@@ -403,18 +437,30 @@ export class OrientedImageLoader{
 			moveToAction = action;
 		};
 
+		const onMouseDown = (evt) => {
+			clicked = true;
+		}
 		const onMouseClick = (evt) => {
-			if(orientedImageControls.hasSomethingCaptured()){
-				return;
-			}
-
-			if(hoveredElement){
+			if (clicked && hoveredElement) {
+				if (orientedImageControls.hasSomethingCaptured()) {
+					orientedImageControls.release();
+				}
 				moveToImage(hoveredElement);
 			}
 		};
 		
-		viewer.renderer.domElement.addEventListener( 'mousemove', onMouseMove, false );
-		viewer.renderer.domElement.addEventListener( 'mousedown', onMouseClick, false );
+		const addListeners = () => {
+			viewer.renderer.domElement.addEventListener( 'mousemove', onMouseMove, false );
+			viewer.renderer.domElement.addEventListener( 'mousedown', onMouseDown, false );
+			viewer.renderer.domElement.addEventListener( 'mouseup', onMouseClick, false );
+		}
+		const releaseListeners = () => {
+			viewer.renderer.domElement.removeEventListener( 'mousemove', onMouseMove, false );
+			viewer.renderer.domElement.removeEventListener( 'mousedown', onMouseDown, false );
+			viewer.renderer.domElement.removeEventListener( 'mouseup', onMouseClick, false );
+		}
+		
+		addListeners();
 
 		viewer.addEventListener("update", () => {
 
@@ -455,6 +501,9 @@ export class OrientedImageLoader{
 		//added these so that the external user has more control
 		images.moveToImage = moveToImage;
 		images.setMoveToAction = setMoveToAction;
+		images.addListeners = addListeners;
+		images.releaseListeners = releaseListeners;
+		images.controls = orientedImageControls;
 		
 		//this is done in this format to maintain the scope of 'this' in in setReleaseAction
 		images.setReleaseAction = (action) => {

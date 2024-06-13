@@ -215,9 +215,9 @@ function loadSettings(viewer, data){
 	viewer.setShowBoundingBox(data.showBoundingBoxes);
 }
 
-function loadView(viewer, view){
-	viewer.scene.view.position.set(...view.position);
-	viewer.scene.view.lookAt(...view.target);
+function loadView(viewer, view, i = 0){
+	viewer.getView(i).position.set(...view.position);
+	viewer.getView(i).lookAt(...view.target);
 }
 
 function loadAnnotationItem(item){
