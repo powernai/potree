@@ -215,6 +215,7 @@ export class Images360 extends EventDispatcher{
 
 	unfocus(){
 		this.selectingEnabled = true;
+		console.debug("Test if github action fetches the right repo")
 		visibleImages.forEach((images360) => {
 			images360.show();
 			images360.addListeners();
