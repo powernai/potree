@@ -6,8 +6,9 @@ import {TextSprite} from "../../TextSprite.js";
 let sg = new THREE.SphereGeometry(1, 8, 8);
 let sgHigh = new THREE.SphereGeometry(1, 128, 128);
 
-let sm = new THREE.MeshBasicMaterial({side: THREE.BackSide});
+let sm = new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x98F4A6 });
 let smHovered = new THREE.MeshBasicMaterial({side: THREE.BackSide, color: 0xff0000});
+let clearMeshMaterial = new THREE.MeshBasicMaterial({side: THREE.BackSide});
 
 let raycaster = new THREE.Raycaster();
 
@@ -161,7 +162,7 @@ export class Images360 extends EventDispatcher{
 			this.elUnfocus.style.display = '';
 		});
 		if (!this.alternateFocus) {
-			this.sphere.material = sm;
+			this.sphere.material = clearMeshMaterial;
 		}
 
 		{ // orientation
@@ -215,7 +216,6 @@ export class Images360 extends EventDispatcher{
 
 	unfocus(){
 		this.selectingEnabled = true;
-		console.debug("Test if github action fetches the right repo")
 		visibleImages.forEach((images360) => {
 			images360.show();
 			images360.addListeners();
@@ -236,6 +236,8 @@ export class Images360 extends EventDispatcher{
 		this.sphere.material.needsUpdate = true;
 		this.sphere.visible = false;
 
+		this.sphere.material = clearMeshMaterial;
+
 		let pos = this.viewer.scene.view.position;
 		let target = this.viewer.scene.view.getPivot();
 		let dir = target.clone().sub(pos).normalize();
@@ -251,10 +253,13 @@ export class Images360 extends EventDispatcher{
 			500
 		);
 
-
 		this.focusedImage = null;
 
 		this.elUnfocus.style.display = "none";
+
+		if(!this.alternateFocus) {
+			this.sphere.material = sm;
+		}
 		
 		this.unfocusAction(image);
 	}
