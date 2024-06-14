@@ -3,3 +3,4 @@
 - This edit is testing if cpms-web will build correctly
 - This is testing if the new token is working proeptly 
 - This commit is testing if cpms-web only build with develop branch 
+- This commit is checking if github action has the potree repo under the directory
