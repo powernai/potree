@@ -162,9 +162,13 @@ export class OrientedImageLoader{
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(text, "application/xml");
 
-		const width = parseInt(doc.getElementsByTagName("width")[0].textContent);
-		const height = parseInt(doc.getElementsByTagName("height")[0].textContent);
-		const f = parseFloat(doc.getElementsByTagName("f")[0].textContent);
+		const widthTag = doc.getElementsByTagName("width")[0];
+		const heightTag = doc.getElementsByTagName("height")[0];
+		const fTag = doc.getElementsByTagName("f")[0];
+
+		const width = widthTag ? parseInt(widthTag.textContent) : 0;
+		const height = heightTag ? parseInt(heightTag.textContent) : 0;
+		const f = fTag ? parseFloat(fTag.textContent) : 0;
 
 		let a = (height / 2)  / f;
 		let fov = 2 * THREE.Math.radToDeg(Math.atan(a));
