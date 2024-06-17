@@ -72,7 +72,7 @@ export class Scene extends EventDispatcher{
 		if (this.views.length > 0) return this.views[0].cameraMode;
 		else return null;
 	}
-		set cameraMode(val) {
+	set cameraMode(val) {
 		if (this.views.length > 0) this.views[0].cameraMode = val;
 	}
 	get view() {
