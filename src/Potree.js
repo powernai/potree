@@ -73,6 +73,7 @@ export {FirstPersonControls} from "./navigation/FirstPersonControls.js";
 export {EarthControls} from "./navigation/EarthControls.js";
 export {DeviceOrientationControls} from "./navigation/DeviceOrientationControls.js";
 export {VRControls} from "./navigation/VRControls.js";
+export {OctreeGeometry,OctreeGeometryNode} from "./modules/loader//2.0/OctreeGeometry.js"
 
 import "./extensions/OrthographicCamera.js";
 import "./extensions/PerspectiveCamera.js";
