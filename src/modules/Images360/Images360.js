@@ -9,6 +9,8 @@ let sgHigh = new THREE.SphereGeometry(1, 128, 128);
 let sm = new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x98F4A6 });
 let smHovered = new THREE.MeshBasicMaterial({side: THREE.BackSide, color: 0xff0000});
 let clearMeshMaterial = new THREE.MeshBasicMaterial({side: THREE.BackSide});
+clearMeshMaterial.transparent = true;
+clearMeshMaterial.opacity = 0.6;
 
 let raycaster = new THREE.Raycaster();
 
