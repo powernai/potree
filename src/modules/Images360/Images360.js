@@ -169,14 +169,20 @@ export class Images360 extends EventDispatcher{
 			let {course, pitch, roll} = image360;
 			//reset orientation everytime
 			this.sphere.rotation.set(0, 0, 0, 'ZYX');
-			// Apply inverse node rotations in order (-Z, -Y, -X)
-			this.sphere.rotateZ(-this.node.rotation.z);
-			this.sphere.rotateY(-this.node.rotation.y);
-			this.sphere.rotateX(-this.node.rotation.x);
-			//Apply course, pitch and roll
-			this.sphere.rotateZ(THREE.MathUtils.degToRad(-course + 90));
-			this.sphere.rotateY(THREE.MathUtils.degToRad(-pitch));
-			this.sphere.rotateX(THREE.MathUtils.degToRad(+roll + 90));
+
+			// Code for old coordinates.json files that use unit vectors. A unit vector has less degrees of freedom so it can be slightly incorrect in some cases.
+			/*
+			this.sphere.rotateY(MathUtils.degToRad(-90));
+			this.sphere.rotateX(MathUtils.degToRad(180));
+			const quat = new Quaternion().setFromUnitVectors(new Vector3(1,0,0),new Vector3(course,pitch,roll));
+			this.sphere.applyQuaternion(quat);
+			*/
+
+			// Code for new coordinates.json files that use euler angles (ZYX, extrinsic, in degrees).
+			this.sphere.rotation.set(MathUtils.degToRad(course), MathUtils.degToRad(pitch), MathUtils.degToRad(roll), 'ZYX');
+			this.sphere.rotateY(MathUtils.degToRad(-90));
+			this.sphere.rotateX(MathUtils.degToRad(180));
+
 			//to render at last so that its always visible ahead of BIM
 			this.sphere.renderOrder = 999;
 			//clearDepth removes any depthBuffer the render has so that the next object is always rendered and shown on top
