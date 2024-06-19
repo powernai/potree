@@ -139,6 +139,8 @@ export class Images360 extends EventDispatcher{
 			this.unfocus();
 		}
 
+		this.focusedImage = image360;
+
 		previousView = {
 			controls: previousView.controls ?? this.viewer.controls,
 			position: previousView.position ?? this.viewer.scene.view.position.clone(),
@@ -154,12 +156,11 @@ export class Images360 extends EventDispatcher{
 
 		this.selectingEnabled = false;
 
-		this.focusedImage = image360;
-
 		this.load(image360).then( () => {
-			// Moving fast, already unfocused the sphere before this texture got loaded. Dispose it.
-			if(image360 !== this.focusedImage) {
-				image.texture.disopse();
+			// Moving fast, this sphere isn't focused anymore by the time the texture loads. Dispose the texture.
+			// Or, moving fast, this sphere was unfocused and refocused. Dispose the new texture and keep the old one.
+			if(image360 !== this.focusedImage || (this.sphere.material !== sm && this.sphere.material !== clearMeshMaterial)) {
+				image360.texture.dispose();
 				return;
 			}
 			this.sphere.visible = true;
