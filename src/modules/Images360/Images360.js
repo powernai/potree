@@ -138,6 +138,9 @@ export class Images360 extends EventDispatcher{
 		if(this.focusedImage !== null){
 			this.unfocus(true);
 		}
+
+		this.focusedImage = image360;
+
 		previousView = {
 			controls: previousView.controls ?? this.viewer.controls,
 			position: previousView.position ?? this.viewer.scene.view.position.clone(),
@@ -154,6 +157,12 @@ export class Images360 extends EventDispatcher{
 		this.selectingEnabled = false;
 
 		this.load(image360).then( () => {
+			// Moving fast, this sphere isn't focused anymore by the time the texture loads. Dispose the texture.
+			// Or, moving fast, this sphere was unfocused and refocused. Dispose the new texture and keep the old one.
+			if(image360 !== this.focusedImage || (this.sphere.material !== sm && this.sphere.material !== clearMeshMaterial)) {
+				image360.texture.dispose();
+				return;
+			}
 			this.sphere.visible = true;
 			this.sphere.material = this.sphere.material.clone();
 			this.sphere.material.map = image360.texture;
@@ -200,8 +209,6 @@ export class Images360 extends EventDispatcher{
 			500
 		);
 
-		this.focusedImage = image360;
-
 		this.viewer.scissorZones[0].scene.images360.forEach((images360) => {
 			if (images360.selectingEnabled && images360.visible) {
 				visibleImages.push(images360);
@@ -228,9 +235,11 @@ export class Images360 extends EventDispatcher{
 			return;
 		}
 
+		if(this.sphere.material !== sm && this.sphere.material !== clearMeshMaterial) {
+			this.sphere.material.map.dispose();
+			this.sphere.material.dispose();
+		}
 
-		this.sphere.material.map = null;
-		this.sphere.material.needsUpdate = true;
 		this.sphere.visible = false;
 
 		this.sphere.material = clearMeshMaterial;
