@@ -109,7 +109,6 @@ export class NavigationCube extends THREE.Object3D {
 			mouse.x = (mouse.x / this.width) * 2 - 1;
 			mouse.y = -(mouse.y / this.width) * 2 + 1;
 
-			console.log("Added to build file successfully")
 			let raycaster = new THREE.Raycaster();
 			raycaster.setFromCamera(mouse, this.camera);
 			raycaster.ray.origin.sub(this.camera.getWorldDirection(new THREE.Vector3()));
