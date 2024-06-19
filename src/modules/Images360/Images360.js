@@ -154,7 +154,14 @@ export class Images360 extends EventDispatcher{
 
 		this.selectingEnabled = false;
 
+		this.focusedImage = image360;
+
 		this.load(image360).then( () => {
+			// Moving fast, already unfocused the sphere before this texture got loaded. Dispose it.
+			if(image360 !== this.focusedImage) {
+				image.texture.disopse();
+				return;
+			}
 			this.sphere.visible = true;
 			this.sphere.material = this.sphere.material.clone();
 			this.sphere.material.map = image360.texture;
@@ -201,8 +208,6 @@ export class Images360 extends EventDispatcher{
 			500
 		);
 
-		this.focusedImage = image360;
-
 		this.viewer.scissorZones[0].scene.images360.forEach((images360) => {
 			if (images360.selectingEnabled && images360.visible) {
 				visibleImages.push(images360);
@@ -231,9 +236,11 @@ export class Images360 extends EventDispatcher{
 			return;
 		}
 
+		if(this.sphere.material !== sm && this.sphere.material !== clearMeshMaterial) {
+			this.sphere.material.map.dispose();
+			this.sphere.material.dispose();
+		}
 
-		this.sphere.material.map = null;
-		this.sphere.material.needsUpdate = true;
 		this.sphere.visible = false;
 
 		this.sphere.material = clearMeshMaterial;
