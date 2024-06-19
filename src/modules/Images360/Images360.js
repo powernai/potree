@@ -410,7 +410,7 @@ export class Images360Loader{
 			mesh.position.set(...xy, altitude);
 			mesh.scale.set(1, 1, 1);
 			mesh.material.transparent = true;
-			mesh.material.opacity = 0.75;
+			mesh.material.opacity = 0.6;
 			mesh.image360 = image360;
 
 			{ // orientation
