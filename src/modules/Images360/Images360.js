@@ -179,9 +179,9 @@ export class Images360 extends EventDispatcher{
 			*/
 
 			// Code for new coordinates.json files that use euler angles (ZYX, extrinsic, in degrees).
-			this.sphere.rotation.set(MathUtils.degToRad(course), MathUtils.degToRad(pitch), MathUtils.degToRad(roll), 'ZYX');
-			this.sphere.rotateY(MathUtils.degToRad(-90));
-			this.sphere.rotateX(MathUtils.degToRad(180));
+			this.sphere.rotation.set(THREE.MathUtils.degToRad(course), THREE.MathUtils.degToRad(pitch), THREE.MathUtils.degToRad(roll), 'ZYX');
+			this.sphere.rotateY(THREE.MathUtils.degToRad(-90));
+			this.sphere.rotateX(THREE.MathUtils.degToRad(180));
 
 			//to render at last so that its always visible ahead of BIM
 			this.sphere.renderOrder = 999;
