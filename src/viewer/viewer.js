@@ -372,15 +372,15 @@ export class Viewer extends EventDispatcher{
 
 			this.loadSettingsFromURL();
 
-			// Load background texture for mini canvas.
-			const loader = new THREE.TextureLoader();
-			const targetScene = this.scissorZones[1].scene;
-			const viewport = this.scissorZones[1].viewport;
-			loader.load('../../../Screenshot from 2024-05-13 09-34-04.png' , function(texture) {
-				targetScene.scene.background = texture;
-				viewport.right = texture.image.width;
-				viewport.top = texture.image.height;
-			});
+			// Load background texture for mini canvas. Disable backgreound initially.
+			// const loader = new THREE.TextureLoader();
+			// const targetScene = this.scissorZones[1].scene;
+			// const viewport = this.scissorZones[1].viewport;
+			// loader.load('../../../Screenshot from 2024-05-13 09-34-04.png' , function(texture) {
+			// 	targetScene.scene.background = texture;
+			// 	viewport.right = texture.image.width;
+			// 	viewport.top = texture.image.height;
+			// });
 		}
 
 		// start rendering!
