@@ -136,7 +136,7 @@ export class Images360 extends EventDispatcher{
 
 	focus(image360){
 		if(this.focusedImage !== null){
-			this.unfocus();
+			this.unfocus(true);
 		}
 
 		this.focusedImage = image360;
@@ -220,16 +220,14 @@ export class Images360 extends EventDispatcher{
 		this.focusAction(image360);
 	}
 
-	unfocus(){
-		this.selectingEnabled = true;
+	unfocus(immediate = false){
+		
 		visibleImages.forEach((images360) => {
 			images360.show();
 			images360.addListeners();
 		});
 		visibleImages = [];
-		for(let image of this.images){
-			image.mesh.visible = true;
-		}
+		
 
 		let image = this.focusedImage;
 
@@ -258,7 +256,7 @@ export class Images360 extends EventDispatcher{
 		this.viewer.scene.view.setView(
 			previousView.position, 
 			previousView.target,
-			500
+			500,
 		);
 
 		this.focusedImage = null;
@@ -268,7 +266,18 @@ export class Images360 extends EventDispatcher{
 		if(!this.alternateFocus) {
 			this.sphere.material = sm;
 		}
-		
+		const executeUnfocusAction = () => {
+			for(let image of this.images){
+				image.mesh.visible = true;
+			}
+			this.selectingEnabled = true;
+		}
+		if(immediate) {
+			executeUnfocusAction();
+			
+		} else {
+			setTimeout(executeUnfocusAction, 0);
+		}
 		this.unfocusAction(image);
 	}
 	
