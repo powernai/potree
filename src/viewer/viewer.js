@@ -1,170 +1,167 @@
+
 import * as THREE from "../../libs/three.js/build/three.module.js";
-import {
-  ClipTask,
-  ClipMethod,
-  CameraMode,
-  LengthUnits,
-  ElevationGradientRepeat,
-} from "../defines.js";
-import { Renderer } from "../PotreeRenderer.js";
-import { PotreeRenderer } from "./PotreeRenderer.js";
-import { EDLRenderer } from "./EDLRenderer.js";
-import { HQSplatRenderer } from "./HQSplatRenderer.js";
-import { Scene } from "./Scene.js";
-import { ClippingTool } from "../utils/ClippingTool.js";
-import { TransformationTool } from "../utils/TransformationTool.js";
-import { Utils } from "../utils.js";
-import { MapView } from "./map.js";
-import { ProfileWindow, ProfileWindowController } from "./profile.js";
-import { BoxVolume } from "../utils/Volume.js";
-import { Features } from "../Features.js";
-import { Message } from "../utils/Message.js";
-import { Sidebar } from "./sidebar.js";
+import {ClipTask, ClipMethod, CameraMode, LengthUnits, ElevationGradientRepeat} from "../defines.js";
+import {Renderer} from "../PotreeRenderer.js";
+import {PotreeRenderer} from "./PotreeRenderer.js";
+import {EDLRenderer} from "./EDLRenderer.js";
+import {HQSplatRenderer} from "./HQSplatRenderer.js";
+import {Scene} from "./Scene.js";
+import {ClippingTool} from "../utils/ClippingTool.js";
+import {TransformationTool} from "../utils/TransformationTool.js";
+import {Utils} from "../utils.js";
+import {MapView} from "./map.js";
+import {ProfileWindow, ProfileWindowController} from "./profile.js";
+import {BoxVolume} from "../utils/Volume.js";
+import {Features} from "../Features.js";
+import {Message} from "../utils/Message.js";
+import {Sidebar} from "./sidebar.js";
 
-import { AnnotationTool } from "../utils/AnnotationTool.js";
-import { MeasuringTool } from "../utils/MeasuringTool.js";
-import { ProfileTool } from "../utils/ProfileTool.js";
-import { VolumeTool } from "../utils/VolumeTool.js";
+import {AnnotationTool} from "../utils/AnnotationTool.js";
+import {MeasuringTool} from "../utils/MeasuringTool.js";
+import {ProfileTool} from "../utils/ProfileTool.js";
+import {VolumeTool} from "../utils/VolumeTool.js";
 
-import { InputHandler } from "../navigation/InputHandler.js";
-import { NavigationCube } from "./NavigationCube.js";
-import { Compass } from "../utils/Compass.js";
-import { OrbitControls } from "../navigation/OrbitControls.js";
-import { FirstPersonControls } from "../navigation/FirstPersonControls.js";
-import { EarthControls } from "../navigation/EarthControls.js";
-import { DeviceOrientationControls } from "../navigation/DeviceOrientationControls.js";
-import { VRControls } from "../navigation/VRControls.js";
+import {InputHandler} from "../navigation/InputHandler.js";
+import {NavigationCube} from "./NavigationCube.js";
+import {Compass} from "../utils/Compass.js";
+import {OrbitControls} from "../navigation/OrbitControls.js";
+import {FirstPersonControls} from "../navigation/FirstPersonControls.js";
+import {EarthControls} from "../navigation/EarthControls.js";
+import {DeviceOrientationControls} from "../navigation/DeviceOrientationControls.js";
+import {VRControls} from "../navigation/VRControls.js";
 import { EventDispatcher } from "../EventDispatcher.js";
 import { ClassificationScheme } from "../materials/ClassificationScheme.js";
-import { VRButton } from "../../libs/three.js/extra/VRButton.js";
+import { VRButton } from '../../libs/three.js/extra/VRButton.js';
 
 import JSON5 from "../../libs/json5-2.1.3/json5.mjs";
 
-export class Viewer extends EventDispatcher {
-  constructor(domElement, args = {}) {
-    super();
 
-    this.renderArea = domElement;
-    this.guiLoaded = false;
-    this.guiLoadTasks = [];
+export class Viewer extends EventDispatcher{
+	
+	constructor(domElement, args = {}){
+		super();
 
-    this.onVrListeners = [];
+		this.renderArea = domElement;
+		this.guiLoaded = false;
+		this.guiLoadTasks = [];
 
-    this.messages = [];
-    this.elMessages = $(`
+		this.onVrListeners = [];
+
+		this.messages = [];
+		this.elMessages = $(`
 		<div id="message_listing" 
 			style="position: absolute; z-index: 1000; left: 10px; bottom: 10px">
 		</div>`);
-    $(domElement).append(this.elMessages);
+		$(domElement).append(this.elMessages);
+		
+		try{
 
-    try {
-      {
-        // generate missing dom hierarchy
-        if ($(domElement).find("#potree_map").length === 0) {
-          let potreeMap = $(`
+		{ // generate missing dom hierarchy
+			if ($(domElement).find('#potree_map').length === 0) {
+				let potreeMap = $(`
 					<div id="potree_map" class="mapBox" style="position: absolute; left: 50px; top: 50px; width: 400px; height: 400px; display: none">
 						<div id="potree_map_header" style="position: absolute; width: 100%; height: 25px; top: 0px; background-color: rgba(0,0,0,0.5); z-index: 1000; border-top-left-radius: 3px; border-top-right-radius: 3px;">
 						</div>
 						<div id="potree_map_content" class="map" style="position: absolute; z-index: 100; top: 25px; width: 100%; height: calc(100% - 25px); border: 2px solid rgba(0,0,0,0.5); box-sizing: border-box;"></div>
 					</div>
 				`);
-          $(domElement).append(potreeMap);
-        }
+				$(domElement).append(potreeMap);
+			}
 
-        if ($(domElement).find("#potree_description").length === 0) {
-          let potreeDescription = $(
-            `<div id="potree_description" class="potree_info_text"></div>`
-          );
-          $(domElement).append(potreeDescription);
-        }
+			if ($(domElement).find('#potree_description').length === 0) {
+				let potreeDescription = $(`<div id="potree_description" class="potree_info_text"></div>`);
+				$(domElement).append(potreeDescription);
+			}
 
-        if ($(domElement).find("#potree_annotations").length === 0) {
-          let potreeAnnotationContainer = $(`
+			if ($(domElement).find('#potree_annotations').length === 0) {
+				let potreeAnnotationContainer = $(`
 					<div id="potree_annotation_container" 
 						style="position: absolute; z-index: 100000; width: 100%; height: 100%; pointer-events: none;"></div>`);
-          $(domElement).append(potreeAnnotationContainer);
-        }
+				$(domElement).append(potreeAnnotationContainer);
+			}
 
-        if ($(domElement).find("#potree_quick_buttons").length === 0) {
-          let potreeMap = $(`
+			if ($(domElement).find('#potree_quick_buttons').length === 0) {
+				let potreeMap = $(`
 					<div id="potree_quick_buttons" class="quick_buttons_container" style="">
 					</div>
 				`);
 
-          // {
-          // 	let imgMenuToggle = document.createElement('img');
-          // 	imgMenuToggle.src = new URL(Potree.resourcePath + '/icons/menu_button.svg').href;
-          // 	imgMenuToggle.onclick = this.toggleSidebar;
-          // 	// imgMenuToggle.classList.add('potree_menu_toggle');
+				// {
+				// 	let imgMenuToggle = document.createElement('img');
+				// 	imgMenuToggle.src = new URL(Potree.resourcePath + '/icons/menu_button.svg').href;
+				// 	imgMenuToggle.onclick = this.toggleSidebar;
+				// 	// imgMenuToggle.classList.add('potree_menu_toggle');
 
-          // 	potreeMap.append(imgMenuToggle);
-          // }
+				// 	potreeMap.append(imgMenuToggle);
+				// }
 
-          // {
-          // 	let imgMenuToggle = document.createElement('img');
-          // 	imgMenuToggle.src = new URL(Potree.resourcePath + '/icons/menu_button.svg').href;
-          // 	imgMenuToggle.onclick = this.toggleSidebar;
-          // 	// imgMenuToggle.classList.add('potree_menu_toggle');
+				// {
+				// 	let imgMenuToggle = document.createElement('img');
+				// 	imgMenuToggle.src = new URL(Potree.resourcePath + '/icons/menu_button.svg').href;
+				// 	imgMenuToggle.onclick = this.toggleSidebar;
+				// 	// imgMenuToggle.classList.add('potree_menu_toggle');
 
-          // 	potreeMap.append(imgMenuToggle);
-          // }
+				// 	potreeMap.append(imgMenuToggle);
+				// }
 
-          // {
-          // 	let imgMenuToggle = document.createElement('img');
-          // 	imgMenuToggle.src = new URL(Potree.resourcePath + '/icons/menu_button.svg').href;
-          // 	imgMenuToggle.onclick = this.toggleSidebar;
-          // 	// imgMenuToggle.classList.add('potree_menu_toggle');
+				// {
+				// 	let imgMenuToggle = document.createElement('img');
+				// 	imgMenuToggle.src = new URL(Potree.resourcePath + '/icons/menu_button.svg').href;
+				// 	imgMenuToggle.onclick = this.toggleSidebar;
+				// 	// imgMenuToggle.classList.add('potree_menu_toggle');
 
-          // 	potreeMap.append(imgMenuToggle);
-          // }
+				// 	potreeMap.append(imgMenuToggle);
+				// }
 
-          $(domElement).append(potreeMap);
-        }
-      }
+				
 
-      this.pointCloudLoadedCallback = args.onPointCloudLoaded || function () {};
+				$(domElement).append(potreeMap);
+			}
+		}
 
-      // if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
-      //	defaultSettings.navigation = "Orbit";
-      // }
+		this.pointCloudLoadedCallback = args.onPointCloudLoaded || function () {};
 
-      this.server = null;
+		// if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+		//	defaultSettings.navigation = "Orbit";
+		// }
 
-      this.fov = 60;
-      this.isFlipYZ = false;
-      this.useDEMCollisions = false;
-      this.generateDEM = false;
-      this.minNodeSize = 30;
-      this.edlStrength = 1.0;
-      this.edlRadius = 1.4;
-      this.edlOpacity = 1.0;
-      this.useEDL = false;
-      this.description = "";
+		this.server = null;
 
-      this.classifications = ClassificationScheme.DEFAULT;
+		this.fov = 60;
+		this.isFlipYZ = false;
+		this.useDEMCollisions = false;
+		this.generateDEM = false;
+		this.minNodeSize = 30;
+		this.edlStrength = 1.0;
+		this.edlRadius = 1.4;
+		this.edlOpacity = 1.0;
+		this.useEDL = false;
+		this.description = "";
 
-      this.lengthUnit = LengthUnits.METER;
-      this.lengthUnitDisplay = LengthUnits.METER;
+		this.classifications = ClassificationScheme.DEFAULT;
 
-      this.showBoundingBox = false;
-      this.showAnnotations = true;
-      this.freeze = false;
-      this.clipTask = ClipTask.HIGHLIGHT;
-      this.clipMethod = ClipMethod.INSIDE_ANY;
+		this.lengthUnit = LengthUnits.METER;
+		this.lengthUnitDisplay = LengthUnits.METER;
 
-      this.elevationGradientRepeat = ElevationGradientRepeat.CLAMP;
+		this.showBoundingBox = false;
+		this.showAnnotations = true;
+		this.freeze = false;
+		this.clipTask = ClipTask.HIGHLIGHT;
+		this.clipMethod = ClipMethod.INSIDE_ANY;
 
-      this.filterReturnNumberRange = [0, 7];
-      this.filterNumberOfReturnsRange = [0, 7];
-      this.filterGPSTimeRange = [-Infinity, Infinity];
-      this.filterPointSourceIDRange = [0, 65535];
+		this.elevationGradientRepeat = ElevationGradientRepeat.CLAMP;
 
-      this.potreeRenderer = null;
-      this.edlRenderer = null;
-      this.renderer = null;
-      this.pRenderer = null;
+		this.filterReturnNumberRange = [0, 7];
+		this.filterNumberOfReturnsRange = [0, 7];
+		this.filterGPSTimeRange = [-Infinity, Infinity];
+		this.filterPointSourceIDRange = [0, 65535];
 
-      /*
+		this.potreeRenderer = null;
+		this.edlRenderer = null;
+		this.renderer = null;
+		this.pRenderer = null;
+
+		/*
 		If you want the exact same picture on both mini canvases,
 		set their scene and viewIdxInScene to be the same.
 
@@ -189,236 +186,228 @@ export class Viewer extends EventDispatcher {
 		If viewportScissoring is true, the viewport and scissor given to the renderer will be identical,
 		and the entered viewport here will be the main factor in this.
 		*/
-      this.scissorZones = [
-        {
-          scene: null,
-          controls: null,
-          moveSpeed: 10,
-          fitInside: false,
-          viewportScissoring: false,
-          viewIdxInScene: 0,
-          scissor: { bottom: 0, left: 0, top: 1, right: 1 },
-          viewport: { bottom: 0, left: 0, top: 1, right: 1 },
-          id: "Main Canvas",
-          visible: true,
-        },
-        {
-          scene: null,
-          controls: null,
-          moveSpeed: 10,
-          fitInside: true,
-          viewportScissoring: true,
-          viewIdxInScene: 0,
-          scissor: { bottom: 0.4, left: 0, top: 1, right: 0.25 },
-          viewport: { bottom: 0.4, left: 0, top: 1, right: 0.25 },
-          id: "Street View Mini Canvas",
-          visible: false,
-        },
-      ];
+		this.scissorZones = [
+			{
+				scene: null,
+				controls: null,
+				moveSpeed: 10,
+				fitInside: false,
+				viewportScissoring: false,
+				viewIdxInScene: 0,
+				scissor: { bottom: 0, left: 0, top: 1, right: 1 },
+				viewport: { bottom: 0, left: 0, top: 1, right: 1 },
+				id: "Main Canvas",
+				visible: true,
+			},
+			{
+				scene: null,
+				controls: null,
+				moveSpeed: 10,
+				fitInside: true,
+				viewportScissoring: true,
+				viewIdxInScene: 0,
+				scissor: { bottom: 0.4, left: 0, top: 1, right: 0.25 },
+				viewport: { bottom: 0.4, left: 0, top: 1, right: 0.25 },
+				id: "Street View Mini Canvas",
+				visible: false,
+			},
+		];
 
-      // Initial % values for viewport are multiplied by screen dimensions to find the current aspect ratio of the viewport.
-      // Changed to divide by the opposite dimension instead. This is proportionally the same but reduces roundoff.
-      for (let i = 0; i < this.scissorZones.length; i++) {
-        const viewport = this.scissorZones[i].viewport;
-        viewport.bottom /= this.renderArea.clientWidth;
-        viewport.left /= this.renderArea.clientHeight;
-        viewport.top /= this.renderArea.clientWidth;
-        viewport.right /= this.renderArea.clientHeight;
-      }
+		// Initial % values for viewport are multiplied by screen dimensions to find the current aspect ratio of the viewport.
+		// Changed to divide by the opposite dimension instead. This is proportionally the same but reduces roundoff.
+		for (let i = 0; i < this.scissorZones.length; i++) {
+			const viewport = this.scissorZones[i].viewport;
+			viewport.bottom /= this.renderArea.clientWidth;
+			viewport.left /= this.renderArea.clientHeight;
+			viewport.top /= this.renderArea.clientWidth;
+			viewport.right /= this.renderArea.clientHeight;
+		}
 
-      this.sceneVR = null;
-      this.overlay = null;
-      this.overlayCamera = null;
+		this.sceneVR = null;
+		this.overlay = null;
+		this.overlayCamera = null;
 
-      this.inputHandler = null;
+		this.inputHandler = null;
 
-      this.clippingTool = null;
-      this.transformationTool = null;
-      this.navigationCube = null;
-      this.compass = null;
+		this.clippingTool =  null;
+		this.transformationTool = null;
+		this.navigationCube = null;
+		this.compass = null;
+		
+		this.skybox = null;
+		this.clock = new THREE.Clock();
+		this.background = null;
 
-      this.skybox = null;
-      this.clock = new THREE.Clock();
-      this.background = null;
+		this.initThree();
 
-      this.initThree();
+		if(args.noDragAndDrop){
+			
+		}else{
+			this.initDragAndDrop();
+		}
 
-      if (args.noDragAndDrop) {
-      } else {
-        this.initDragAndDrop();
-      }
+		if(typeof Stats !== "undefined"){
+			this.stats = new Stats();
+			this.stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( this.stats.dom );
+		}
 
-      if (typeof Stats !== "undefined") {
-        this.stats = new Stats();
-        this.stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
-        document.body.appendChild(this.stats.dom);
-      }
+		{
+			let canvas = this.renderer.domElement;
+			canvas.addEventListener("webglcontextlost", (e) => {
+				console.log(e);
+				this.postMessage("WebGL context lost. \u2639");
 
-      {
-        let canvas = this.renderer.domElement;
-        canvas.addEventListener(
-          "webglcontextlost",
-          (e) => {
-            console.log(e);
-            this.postMessage("WebGL context lost. \u2639");
+				let gl = this.renderer.getContext();
+				let error = gl.getError();
+				console.log(error);
+			}, false);
+		}
 
-            let gl = this.renderer.getContext();
-            let error = gl.getError();
-            console.log(error);
-          },
-          false
-        );
-      }
+		{
+			this.overlay = new THREE.Scene();
+			this.overlayCamera = new THREE.OrthographicCamera(
+				0, 1,
+				1, 0,
+				-1000, 1000
+			);
+		}
+		
+		this.pRenderer = new Renderer(this.renderer);
+		
+		{
+			let near = 2.5;
+			let far = 10.0;
+			let fov = 90;
+			
+			this.shadowTestCam = new THREE.PerspectiveCamera(90, 1, near, far);
+			this.shadowTestCam.position.set(3.50, -2.80, 8.561);
+			this.shadowTestCam.lookAt(new THREE.Vector3(0, 0, 4.87));
+		}
+		
 
-      {
-        this.overlay = new THREE.Scene();
-        this.overlayCamera = new THREE.OrthographicCamera(
-          0,
-          1,
-          1,
-          0,
-          -1000,
-          1000
-        );
-      }
+		let scene = new Scene(this.renderer);
+		let scene2 = new Scene(this.renderer);
+		
+		{ // create VR scene
+			this.sceneVR = new THREE.Scene();
 
-      this.pRenderer = new Renderer(this.renderer);
+			// let texture = new THREE.TextureLoader().load(`${Potree.resourcePath}/images/vr_controller_help.jpg`);
 
-      {
-        let near = 2.5;
-        let far = 10.0;
-        let fov = 90;
+			// let plane = new THREE.PlaneBufferGeometry(1, 1, 1, 1);
+			// let infoMaterial = new THREE.MeshBasicMaterial({map: texture});
+			// let infoNode = new THREE.Mesh(plane, infoMaterial);
+			// infoNode.position.set(-0.5, 1, 0);
+			// infoNode.scale.set(0.4, 0.3, 1);
+			// infoNode.lookAt(0, 1, 0)
+			// this.sceneVR.add(infoNode);
 
-        this.shadowTestCam = new THREE.PerspectiveCamera(90, 1, near, far);
-        this.shadowTestCam.position.set(3.5, -2.8, 8.561);
-        this.shadowTestCam.lookAt(new THREE.Vector3(0, 0, 4.87));
-      }
+			// window.infoNode = infoNode;
+		}
 
-      let scene = new Scene(this.renderer);
-      let scene2 = new Scene(this.renderer);
+		this.setScene(scene, 0);
+		this.setScene(scene2, 1);
 
-      {
-        // create VR scene
-        this.sceneVR = new THREE.Scene();
+		{
+			this.inputHandler = new InputHandler(this);
+			this.inputHandler.setScene(this.scene);
 
-        // let texture = new THREE.TextureLoader().load(`${Potree.resourcePath}/images/vr_controller_help.jpg`);
+			this.clippingTool = new ClippingTool(this);
+			this.transformationTool = new TransformationTool(this);
+			this.navigationCube = new NavigationCube(this);
+			this.navigationCube.visible = false;
 
-        // let plane = new THREE.PlaneBufferGeometry(1, 1, 1, 1);
-        // let infoMaterial = new THREE.MeshBasicMaterial({map: texture});
-        // let infoNode = new THREE.Mesh(plane, infoMaterial);
-        // infoNode.position.set(-0.5, 1, 0);
-        // infoNode.scale.set(0.4, 0.3, 1);
-        // infoNode.lookAt(0, 1, 0)
-        // this.sceneVR.add(infoNode);
+			this.compass = new Compass(this);
+			
+			this.createControls();
 
-        // window.infoNode = infoNode;
-      }
+			this.clippingTool.setScene(this.scene);
+			
+			let onPointcloudAdded = (e) => {
+				if (this.scene.pointclouds.length === 1) {
+					let speed = e.pointcloud.boundingBox.getSize(new THREE.Vector3()).length();
+					speed = speed / 5;
+					this.setMoveSpeed(speed);
+				}
+			};
 
-      this.setScene(scene, 0);
-      this.setScene(scene2, 1);
+			let onVolumeRemoved = (e) => {
+				this.inputHandler.deselect(e.volume);
+			};
 
-      {
-        this.inputHandler = new InputHandler(this);
-        this.inputHandler.setScene(this.scene);
+			this.addEventListener('scene_changed', (e) => {
+				this.inputHandler.setScene(e.scene);
+				this.clippingTool.setScene(this.scene);
+				
+				if(!e.scene.hasEventListener("pointcloud_added", onPointcloudAdded)){
+					e.scene.addEventListener("pointcloud_added", onPointcloudAdded);
+				}
 
-        this.clippingTool = new ClippingTool(this);
-        this.transformationTool = new TransformationTool(this);
-        this.navigationCube = new NavigationCube(this);
-        this.navigationCube.visible = false;
+				if(!e.scene.hasEventListener("volume_removed", onPointcloudAdded)){
+					e.scene.addEventListener("volume_removed", onVolumeRemoved);
+				}
+				
+			});
 
-        this.compass = new Compass(this);
+			this.scene.addEventListener("volume_removed", onVolumeRemoved);
+			this.scene.addEventListener('pointcloud_added', onPointcloudAdded);
+		}
 
-        this.createControls();
+		{ // set defaults
+			this.setFOV(60);
+			this.setEDLEnabled(false);
+			this.setEDLRadius(1.4);
+			this.setEDLStrength(0.4);
+			this.setEDLOpacity(1.0);
+			this.setClipTask(ClipTask.HIGHLIGHT);
+			this.setClipMethod(ClipMethod.INSIDE_ANY);
+			this.setPointBudget(1*1000*1000);
+			this.setShowBoundingBox(false);
+			this.setFreeze(false);
+			this.setControls(this.orbitControls, 0);
+			this.setControls(this.orbitControls2, 1);
+			this.setBackground('gradient');
 
-        this.clippingTool.setScene(this.scene);
+			this.scaleFactor = 1;
 
-        let onPointcloudAdded = (e) => {
-          if (this.scene.pointclouds.length === 1) {
-            let speed = e.pointcloud.boundingBox
-              .getSize(new THREE.Vector3())
-              .length();
-            speed = speed / 5;
-            this.setMoveSpeed(speed);
-          }
-        };
+			this.loadSettingsFromURL();
 
-        let onVolumeRemoved = (e) => {
-          this.inputHandler.deselect(e.volume);
-        };
+			// Load background texture for mini canvas. Disable backgreound initially.
+			// const loader = new THREE.TextureLoader();
+			// const targetScene = this.scissorZones[1].scene;
+			// const viewport = this.scissorZones[1].viewport;
+			// loader.load('../../../Screenshot from 2024-05-13 09-34-04.png' , function(texture) {
+			// 	targetScene.scene.background = texture;
+			// 	viewport.right = texture.image.width;
+			// 	viewport.top = texture.image.height;
+			// });
+		}
 
-        this.addEventListener("scene_changed", (e) => {
-          this.inputHandler.setScene(e.scene);
-          this.clippingTool.setScene(this.scene);
+		// start rendering!
+		//if(args.useDefaultRenderLoop === undefined || args.useDefaultRenderLoop === true){
+			//requestAnimationFrame(this.loop.bind(this));
+		//}
 
-          if (
-            !e.scene.hasEventListener("pointcloud_added", onPointcloudAdded)
-          ) {
-            e.scene.addEventListener("pointcloud_added", onPointcloudAdded);
-          }
+		this.renderer.setAnimationLoop(this.loop.bind(this));
 
-          if (!e.scene.hasEventListener("volume_removed", onPointcloudAdded)) {
-            e.scene.addEventListener("volume_removed", onVolumeRemoved);
-          }
-        });
+		this.loadGUI = this.loadGUI.bind(this);
 
-        this.scene.addEventListener("volume_removed", onVolumeRemoved);
-        this.scene.addEventListener("pointcloud_added", onPointcloudAdded);
-      }
+		this.annotationTool = new AnnotationTool(this);
+		this.measuringTool = new MeasuringTool(this);
+		this.profileTool = new ProfileTool(this);
+		this.volumeTool = new VolumeTool(this);
 
-      {
-        // set defaults
-        this.setFOV(60);
-        this.setEDLEnabled(false);
-        this.setEDLRadius(1.4);
-        this.setEDLStrength(0.4);
-        this.setEDLOpacity(1.0);
-        this.setClipTask(ClipTask.HIGHLIGHT);
-        this.setClipMethod(ClipMethod.INSIDE_ANY);
-        this.setPointBudget(1 * 1000 * 1000);
-        this.setShowBoundingBox(false);
-        this.setFreeze(false);
-        this.setControls(this.orbitControls, 0);
-        this.setControls(this.orbitControls2, 1);
-        this.setBackground("gradient");
+		}catch(e){
+			this.onCrash(e);
+		}
+	}
 
-        this.scaleFactor = 1;
+	onCrash(error){
 
-        this.loadSettingsFromURL();
+		$(this.renderArea).empty();
 
-        // Load background texture for mini canvas. Background is not needed initially
-        // const loader = new THREE.TextureLoader();
-        // const targetScene = this.scissorZones[1].scene;
-        // const viewport = this.scissorZones[1].viewport;
-        // loader.load('../../../Screenshot from 2024-05-13 09-34-04.png' , function(texture) {
-        // 	targetScene.scene.background = texture;
-        // 	viewport.right = texture.image.width;
-        // 	viewport.top = texture.image.height;
-        // });
-      }
-
-      // start rendering!
-      //if(args.useDefaultRenderLoop === undefined || args.useDefaultRenderLoop === true){
-      //requestAnimationFrame(this.loop.bind(this));
-      //}
-
-      this.renderer.setAnimationLoop(this.loop.bind(this));
-
-      this.loadGUI = this.loadGUI.bind(this);
-
-      this.annotationTool = new AnnotationTool(this);
-      this.measuringTool = new MeasuringTool(this);
-      this.profileTool = new ProfileTool(this);
-      this.volumeTool = new VolumeTool(this);
-    } catch (e) {
-      this.onCrash(e);
-    }
-  }
-
-  onCrash(error) {
-    $(this.renderArea).empty();
-
-    if ($(this.renderArea).find("#potree_failpage").length === 0) {
-      let elFailPage = $(`
+		if ($(this.renderArea).find('#potree_failpage').length === 0) {
+			let elFailPage = $(`
 			<div id="#potree_failpage" class="potree_failpage"> 
 				
 				<h1>Potree Encountered An Error </h1>
@@ -448,2048 +437,1891 @@ export class Viewer extends EventDispatcher {
 				
 			</div>`);
 
-      let elErrorMessage = elFailPage.find("#potree_error_console");
-      elErrorMessage.html(error.stack);
-
-      $(this.renderArea).append(elFailPage);
-    }
-
-    throw error;
-  }
-
-  // Getters and setters to support old code.
-  get moveSpeed() {
-    if (this.scissorZones.length > 0) return this.scissorZones[0].moveSpeed;
-    else return null;
-  }
-  set moveSpeed(val) {
-    if (this.scissorZones.length > 0) this.scissorZones[0].moveSpeed = val;
-  }
-  get scene() {
-    if (this.scissorZones.length > 0) return this.scissorZones[0].scene;
-    else return null;
-  }
-  set scene(val) {
-    if (this.scissorZones.length > 0) this.scissorZones[0].scene = val;
-  }
-  get controls() {
-    if (this.scissorZones.length > 0) return this.scissorZones[0].controls;
-    else return null;
-  }
-  set controls(val) {
-    if (this.scissorZones.length > 0) this.scissorZones[0].controls = val;
-  }
-
-  // Better getters and setters.
-  getCamera(idx) {
-    const zone = this.scissorZones[idx];
-    return zone.scene.getActiveCamera(zone.viewIdxInScene);
-  }
-  getView(idx) {
-    const zone = this.scissorZones[idx];
-    return zone.scene.views[zone.viewIdxInScene].view;
-  }
-  getScissor(idx, ignoreViewportScissoring = false) {
-    if (!ignoreViewportScissoring && this.scissorZones[idx].viewportScissoring)
-      return this.getViewport(idx);
-
-    const zone = this.scissorZones[idx].scissor;
-    const width = this.renderArea.clientWidth;
-    const height = this.renderArea.clientHeight;
-
-    return new THREE.Vector4(
-      zone.left * width,
-      zone.bottom * height,
-      (zone.right - zone.left) * width,
-      (zone.top - zone.bottom) * height
-    );
-  }
-  getViewport(idx) {
-    const scissor = this.getScissor(idx, true);
-    const viewport = this.scissorZones[idx].viewport;
-    // Call Math.min or Math.max depending on fitInside.
-    let requiredScale = (
-      this.scissorZones[idx].fitInside ? Math.min : Math.max
-    )(
-      scissor.width / (viewport.right - viewport.left),
-      scissor.height / (viewport.top - viewport.bottom)
-    );
-    let viewportScale = [
-      (viewport.right - viewport.left) * requiredScale,
-      (viewport.top - viewport.bottom) * requiredScale,
-    ];
-    // Center of the scissor box will be the center of viewport as well.
-    let viewportCenter = [
-      scissor.x + scissor.width / 2,
-      scissor.y + scissor.height / 2,
-    ];
-    const width = this.renderArea.clientWidth;
-    const height = this.renderArea.clientHeight;
-    // Makes the mini canvas (idx 1) always go to the top left of avilable space instead of the center.
-    if (idx === 1) {
-      return new THREE.Vector4(
-        0,
-        height - viewportScale[1],
-        viewportScale[0],
-        viewportScale[1]
-      );
-    }
-    return new THREE.Vector4(
-      viewportCenter[0] - viewportScale[0] / 2,
-      viewportCenter[1] - viewportScale[1] / 2,
-      viewportScale[0],
-      viewportScale[1]
-    );
-  }
-
-  // ------------------------------------------------------------------------------------
-  // Viewer API
-  // ------------------------------------------------------------------------------------
-
-  setScene(scene, idx = 0) {
-    if (idx >= this.scissorZones.length) {
-      console.log("Out of bounds access to scissorZones");
-      return;
-    }
-    if (scene === this.scissorZones[idx].scene) {
-      return;
-    }
-
-    let oldScene = this.scissorZones[idx].scene;
-    this.scissorZones[idx].scene = scene;
-
-    this.dispatchEvent({
-      type: "scene_changed",
-      oldScene: oldScene,
-      scene: scene,
-    });
-
-    {
-      // Annotations
-      $(".annotation").detach();
-
-      // for(let annotation of this.scene.annotations){
-      //	this.renderArea.appendChild(annotation.domElement[0]);
-      // }
-
-      this.scissorZones[idx].scene.annotations.traverse((annotation) => {
-        this.renderArea.appendChild(annotation.domElement[0]);
-      });
-
-      if (!this.onAnnotationAdded) {
-        this.onAnnotationAdded = (e) => {
-          // console.log("annotation added: " + e.annotation.title);
-
-          e.annotation.traverse((node) => {
-            $("#potree_annotation_container").append(node.domElement);
-            //this.renderArea.appendChild(node.domElement[0]);
-            node.scene = this.scissorZones[idx].scene;
-          });
-        };
-      }
-
-      if (oldScene) {
-        oldScene.annotations.removeEventListener(
-          "annotation_added",
-          this.onAnnotationAdded
-        );
-      }
-      this.scissorZones[idx].scene.annotations.addEventListener(
-        "annotation_added",
-        this.onAnnotationAdded
-      );
-    }
-  }
-
-  setControls(controls, idx = 0) {
-    if (idx >= this.scissorZones.length) {
-      console.log("Out of bounds access to scissorZones");
-      return;
-    }
-
-    if (controls !== this.scissorZones[idx].controls) {
-      if (this.scissorZones[idx].controls) {
-        this.scissorZones[idx].controls.enabled = false;
-        this.inputHandler.removeInputListener(this.scissorZones[idx].controls);
-      }
-
-      this.scissorZones[idx].controls = controls;
-      this.scissorZones[idx].controls.enabled = true;
-      this.inputHandler.addInputListener(this.scissorZones[idx].controls);
-    }
-  }
-
-  getControls(idx = 0) {
-    if (this.renderer.xr.isPresenting) {
-      return this.vrControls;
-    } else {
-      return this.scissorZones[idx].controls;
-    }
-  }
-
-  getMinNodeSize() {
-    return this.minNodeSize;
-  }
-
-  setMinNodeSize(value) {
-    if (this.minNodeSize !== value) {
-      this.minNodeSize = value;
-      this.dispatchEvent({ type: "minnodesize_changed", viewer: this });
-    }
-  }
-
-  getBackground() {
-    return this.background;
-  }
-
-  setBackground(bg) {
-    if (this.background === bg) {
-      return;
-    }
-
-    if (bg === "skybox") {
-      this.skybox = Utils.loadSkybox(
-        new URL(Potree.resourcePath + "/textures/skybox2/").href
-      );
-    }
-
-    this.background = bg;
-    this.dispatchEvent({ type: "background_changed", viewer: this });
-  }
-
-  setDescription(value) {
-    this.description = value;
-
-    $("#potree_description").html(value);
-    //$('#potree_description').text(value);
-  }
-
-  getDescription() {
-    return this.description;
-  }
-
-  setShowBoundingBox(value) {
-    if (this.showBoundingBox !== value) {
-      this.showBoundingBox = value;
-      this.dispatchEvent({ type: "show_boundingbox_changed", viewer: this });
-    }
-  }
-
-  getShowBoundingBox() {
-    return this.showBoundingBox;
-  }
-
-  setMoveSpeed(value, idx = 0) {
-    if (idx >= this.scissorZones.length) {
-      console.log("Out of bounds access to scissorZones");
-      return;
-    }
-
-    if (this.scissorZones[idx].moveSpeed !== value) {
-      this.scissorZones[idx].moveSpeed = value;
-      this.dispatchEvent({
-        type: "move_speed_changed",
-        viewer: this,
-        speed: value,
-        idx: idx,
-      });
-    }
-  }
-
-  getMoveSpeed(idx = 0) {
-    return this.scissorZones[idx].moveSpeed;
-  }
-
-  setWeightClassification(w) {
-    for (let i = 0; i < this.scene.pointclouds.length; i++) {
-      this.scene.pointclouds[i].material.weightClassification = w;
-      this.dispatchEvent({
-        type: "attribute_weights_changed" + i,
-        viewer: this,
-      });
-    }
-  }
-
-  setFreeze(value) {
-    value = Boolean(value);
-    if (this.freeze !== value) {
-      this.freeze = value;
-      this.dispatchEvent({ type: "freeze_changed", viewer: this });
-    }
-  }
-
-  getFreeze() {
-    return this.freeze;
-  }
-
-  getClipTask() {
-    return this.clipTask;
-  }
-
-  getClipMethod() {
-    return this.clipMethod;
-  }
-
-  setClipTask(value) {
-    if (this.clipTask !== value) {
-      this.clipTask = value;
-
-      this.dispatchEvent({
-        type: "cliptask_changed",
-        viewer: this,
-      });
-    }
-  }
-
-  setClipMethod(value) {
-    if (this.clipMethod !== value) {
-      this.clipMethod = value;
-
-      this.dispatchEvent({
-        type: "clipmethod_changed",
-        viewer: this,
-      });
-    }
-  }
-
-  setElevationGradientRepeat(value) {
-    if (this.elevationGradientRepeat !== value) {
-      this.elevationGradientRepeat = value;
-
-      this.dispatchEvent({
-        type: "elevation_gradient_repeat_changed",
-        viewer: this,
-      });
-    }
-  }
-
-  setPointBudget(value) {
-    if (Potree.pointBudget !== value) {
-      Potree.pointBudget = parseInt(value);
-      this.dispatchEvent({ type: "point_budget_changed", viewer: this });
-    }
-  }
-
-  getPointBudget() {
-    return Potree.pointBudget;
-  }
-
-  setShowAnnotations(value) {
-    if (this.showAnnotations !== value) {
-      this.showAnnotations = value;
-      this.dispatchEvent({ type: "show_annotations_changed", viewer: this });
-    }
-  }
-
-  getShowAnnotations() {
-    return this.showAnnotations;
-  }
-
-  setDEMCollisionsEnabled(value) {
-    if (this.useDEMCollisions !== value) {
-      this.useDEMCollisions = value;
-      this.dispatchEvent({ type: "use_demcollisions_changed", viewer: this });
-    }
-  }
-
-  getDEMCollisionsEnabled() {
-    return this.useDEMCollisions;
-  }
-
-  setEDLEnabled(value) {
-    value = Boolean(value) && Features.SHADER_EDL.isSupported();
-
-    if (this.useEDL !== value) {
-      this.useEDL = value;
-      this.dispatchEvent({ type: "use_edl_changed", viewer: this });
-    }
-  }
-
-  getEDLEnabled() {
-    return this.useEDL;
-  }
-
-  setEDLRadius(value) {
-    if (this.edlRadius !== value) {
-      this.edlRadius = value;
-      this.dispatchEvent({ type: "edl_radius_changed", viewer: this });
-    }
-  }
-
-  getEDLRadius() {
-    return this.edlRadius;
-  }
-
-  setEDLStrength(value) {
-    if (this.edlStrength !== value) {
-      this.edlStrength = value;
-      this.dispatchEvent({ type: "edl_strength_changed", viewer: this });
-    }
-  }
-
-  getEDLStrength() {
-    return this.edlStrength;
-  }
-
-  setEDLOpacity(value) {
-    if (this.edlOpacity !== value) {
-      this.edlOpacity = value;
-      this.dispatchEvent({ type: "edl_opacity_changed", viewer: this });
-    }
-  }
-
-  getEDLOpacity() {
-    return this.edlOpacity;
-  }
-
-  setFOV(value) {
-    if (this.fov !== value) {
-      this.fov = value;
-      this.dispatchEvent({ type: "fov_changed", viewer: this });
-    }
-  }
-
-  getFOV() {
-    return this.fov;
-  }
-
-  disableAnnotations() {
-    this.scene.annotations.traverse((annotation) => {
-      annotation.domElement.css("pointer-events", "none");
-
-      // return annotation.visible;
-    });
-  }
-
-  enableAnnotations() {
-    this.scene.annotations.traverse((annotation) => {
-      annotation.domElement.css("pointer-events", "auto");
-
-      // return annotation.visible;
-    });
-  }
-
-  setClassifications(classifications) {
-    this.classifications = classifications;
-
-    this.dispatchEvent({ type: "classifications_changed", viewer: this });
-  }
-
-  setClassificationVisibility(key, value) {
-    if (!this.classifications[key]) {
-      this.classifications[key] = { visible: value, name: "no name" };
-      this.dispatchEvent({
-        type: "classification_visibility_changed",
-        viewer: this,
-      });
-    } else if (this.classifications[key].visible !== value) {
-      this.classifications[key].visible = value;
-      this.dispatchEvent({
-        type: "classification_visibility_changed",
-        viewer: this,
-      });
-    }
-  }
-
-  toggleAllClassificationsVisibility() {
-    let numVisible = 0;
-    let numItems = 0;
-    for (const key of Object.keys(this.classifications)) {
-      if (this.classifications[key].visible) {
-        numVisible++;
-      }
-      numItems++;
-    }
-
-    let visible = true;
-    if (numVisible === numItems) {
-      visible = false;
-    }
-
-    let somethingChanged = false;
-
-    for (const key of Object.keys(this.classifications)) {
-      if (this.classifications[key].visible !== visible) {
-        this.classifications[key].visible = visible;
-        somethingChanged = true;
-      }
-    }
-
-    if (somethingChanged) {
-      this.dispatchEvent({
-        type: "classification_visibility_changed",
-        viewer: this,
-      });
-    }
-  }
-
-  setFilterReturnNumberRange(from, to) {
-    this.filterReturnNumberRange = [from, to];
-    this.dispatchEvent({
-      type: "filter_return_number_range_changed",
-      viewer: this,
-    });
-  }
-
-  setFilterNumberOfReturnsRange(from, to) {
-    this.filterNumberOfReturnsRange = [from, to];
-    this.dispatchEvent({
-      type: "filter_number_of_returns_range_changed",
-      viewer: this,
-    });
-  }
-
-  setFilterGPSTimeRange(from, to) {
-    this.filterGPSTimeRange = [from, to];
-    this.dispatchEvent({ type: "filter_gps_time_range_changed", viewer: this });
-  }
-
-  setFilterPointSourceIDRange(from, to) {
-    this.filterPointSourceIDRange = [from, to];
-    this.dispatchEvent({
-      type: "filter_point_source_id_range_changed",
-      viewer: this,
-    });
-  }
-
-  setLengthUnit(value) {
-    switch (value) {
-      case "m":
-        this.lengthUnit = LengthUnits.METER;
-        this.lengthUnitDisplay = LengthUnits.METER;
-        break;
-      case "ft":
-        this.lengthUnit = LengthUnits.FEET;
-        this.lengthUnitDisplay = LengthUnits.FEET;
-        break;
-      case "in":
-        this.lengthUnit = LengthUnits.INCH;
-        this.lengthUnitDisplay = LengthUnits.INCH;
-        break;
-    }
-
-    this.dispatchEvent({
-      type: "length_unit_changed",
-      viewer: this,
-      value: value,
-    });
-  }
-
-  setLengthUnitAndDisplayUnit(lengthUnitValue, lengthUnitDisplayValue) {
-    switch (lengthUnitValue) {
-      case "m":
-        this.lengthUnit = LengthUnits.METER;
-        break;
-      case "ft":
-        this.lengthUnit = LengthUnits.FEET;
-        break;
-      case "in":
-        this.lengthUnit = LengthUnits.INCH;
-        break;
-    }
-
-    switch (lengthUnitDisplayValue) {
-      case "m":
-        this.lengthUnitDisplay = LengthUnits.METER;
-        break;
-      case "ft":
-        this.lengthUnitDisplay = LengthUnits.FEET;
-        break;
-      case "in":
-        this.lengthUnitDisplay = LengthUnits.INCH;
-        break;
-    }
-
-    this.dispatchEvent({
-      type: "length_unit_changed",
-      viewer: this,
-      value: lengthUnitValue,
-    });
-  }
-
-  zoomTo(node, factor, animationDuration = 0) {
-    for (
-      let scissorIdx = 0;
-      scissorIdx < this.scissorZones.length;
-      scissorIdx++
-    ) {
-      let viewHolder =
-        this.scissorZones[scissorIdx].scene.views[
-          this.scissorZones[scissorIdx].viewIdxInScene
-        ];
-      let view = viewHolder.view;
-
-      let camera = viewHolder.cameraP.clone();
-      camera.rotation.copy(viewHolder.cameraP.rotation);
-      camera.rotation.order = "ZXY";
-      camera.rotation.x = Math.PI / 2 + view.pitch;
-      camera.rotation.y = view.roll;
-      camera.rotation.z = view.yaw;
-      camera.updateMatrix();
-      camera.updateMatrixWorld();
-      camera.zoomTo(node, factor);
-
-      let bs;
-      if (node.boundingSphere) {
-        bs = node.boundingSphere;
-      } else if (node.geometry && node.geometry.boundingSphere) {
-        bs = node.geometry.boundingSphere;
-      } else {
-        bs = node.boundingBox.getBoundingSphere(new THREE.Sphere());
-      }
-      bs = bs.clone().applyMatrix4(node.matrixWorld);
-
-      let startPosition = view.position.clone();
-      let endPosition = camera.position.clone();
-      let startTarget = view.getPivot();
-      let endTarget = bs.center;
-      let startRadius = view.radius;
-      let endRadius = endPosition.distanceTo(endTarget);
-
-      let easing = TWEEN.Easing.Quartic.Out;
-
-      {
-        // animate camera position
-        let pos = startPosition.clone();
-        let tween = new TWEEN.Tween(pos).to(endPosition, animationDuration);
-        tween.easing(easing);
-
-        tween.onUpdate(() => {
-          view.position.copy(pos);
-        });
-
-        tween.start();
-      }
-
-      {
-        // animate camera target
-        let target = startTarget.clone();
-        let tween = new TWEEN.Tween(target).to(endTarget, animationDuration);
-        tween.easing(easing);
-        tween.onUpdate(() => {
-          view.lookAt(target);
-        });
-        tween.onComplete(() => {
-          view.lookAt(target);
-          this.dispatchEvent({ type: "focusing_finished", target: this });
-        });
-
-        this.dispatchEvent({ type: "focusing_started", target: this });
-        tween.start();
-      }
-    }
-  }
-
-  moveToGpsTimeVicinity(time) {
-    const result = Potree.Utils.findClosestGpsTime(time, viewer);
-
-    const box = result.node.pointcloud
-      .deepestNodeAt(result.position)
-      .getBoundingBox();
-    const diameter = box.min.distanceTo(box.max);
-
-    const camera = this.scene.getActiveCamera();
-    const offset = camera
-      .getWorldDirection(new THREE.Vector3())
-      .multiplyScalar(diameter);
-    const newCamPos = result.position.clone().sub(offset);
-
-    this.scene.view.position.copy(newCamPos);
-    this.scene.view.lookAt(result.position);
-  }
-
-  showAbout() {
-    $(function () {
-      $("#about-panel").dialog();
-    });
-  }
-
-  getBoundingBox(pointclouds) {
-    return this.scene.getBoundingBox(pointclouds);
-  }
-
-  getGpsTimeExtent() {
-    const range = [Infinity, -Infinity];
-
-    for (const pointcloud of this.scene.pointclouds) {
-      const attributes = pointcloud.pcoGeometry.pointAttributes.attributes;
-      const aGpsTime = attributes.find((a) => a.name === "gps-time");
-
-      if (aGpsTime) {
-        range[0] = Math.min(range[0], aGpsTime.range[0]);
-        range[1] = Math.max(range[1], aGpsTime.range[1]);
-      }
-    }
-
-    return range;
-  }
-
-  fitToScreen(box = null, factor = 1, animationDuration = 0) {
-    if (box) {
-    } else if (this.scene.pointclouds.length) {
-      box = this.getBoundingBox(this.scene.pointclouds);
-    } else {
-      box = new THREE.Box3();
-      box.min = new THREE.Vector3(40, -20, 0);
-      box.max = new THREE.Vector3(80, 90, 20);
-    }
-
-    let node = new THREE.Object3D();
-    node.boundingBox = box;
-
-    this.zoomTo(node, factor, animationDuration);
-    this.controls.stop();
-  }
-
-  toggleNavigationCube(val) {
-    this.navigationCube.visible = val;
-  }
-
-  setView(view, box = null) {
-    if (!view) return;
-
-    switch (view) {
-      case "South":
-        this.setFrontView(box);
-        break;
-      case "North":
-        this.setBackView(box);
-        break;
-      case "West":
-        this.setLeftView(box);
-        break;
-      case "East":
-        this.setRightView(box);
-        break;
-      case "U":
-        this.setTopView(box);
-        break;
-      case "D":
-        this.setBottomView(box);
-        break;
-    }
-  }
-
-  setTopView(box) {
-    this.getView(0).yaw = 0;
-    this.getView(0).pitch = -Math.PI / 2;
-
-    this.fitToScreen(box);
-  }
-
-  setBottomView(box) {
-    this.getView(0).yaw = -Math.PI;
-    this.getView(0).pitch = Math.PI / 2;
-
-    this.fitToScreen(box);
-  }
-
-  setFrontView(box) {
-    this.getView(0).yaw = 0;
-    this.getView(0).pitch = 0;
-
-    this.fitToScreen(box);
-  }
-
-  setBackView(box) {
-    this.getView(0).yaw = Math.PI;
-    this.getView(0).pitch = 0;
-
-    this.fitToScreen(box);
-  }
-
-  setLeftView(box) {
-    this.getView(0).yaw = -Math.PI / 2;
-    this.getView(0).pitch = 0;
-
-    this.fitToScreen(box);
-  }
-
-  setRightView(box) {
-    this.getView(0).yaw = Math.PI / 2;
-    this.getView(0).pitch = 0;
-
-    this.fitToScreen(box);
-  }
-
-  flipYZ() {
-    this.isFlipYZ = !this.isFlipYZ;
-
-    // TODO flipyz
-    console.log("TODO");
-  }
-
-  setCameraMode(mode) {
-    this.scene.cameraMode = mode;
-
-    for (let pointcloud of this.scene.pointclouds) {
-      pointcloud.material.useOrthographicCamera =
-        mode == CameraMode.ORTHOGRAPHIC;
-    }
-  }
-
-  getProjection() {
-    const pointcloud = this.scene.pointclouds[0];
-
-    if (pointcloud) {
-      return pointcloud.projection;
-    } else {
-      return null;
-    }
-  }
-
-  async loadProject(url) {
-    const response = await fetch(url);
-
-    const text = await response.text();
-    const json = JSON5.parse(text);
-    // const json = JSON.parse(text);
-
-    if (json.type === "Potree") {
-      Potree.loadProject(viewer, json);
-    }
-
-    //Potree.loadProject(this, url);
-  }
-
-  saveProject() {
-    return Potree.saveProject(this);
-  }
-
-  loadSettingsFromURL() {
-    if (Utils.getParameterByName("pointSize")) {
-      this.setPointSize(parseFloat(Utils.getParameterByName("pointSize")));
-    }
-
-    if (Utils.getParameterByName("FOV")) {
-      this.setFOV(parseFloat(Utils.getParameterByName("FOV")));
-    }
-
-    if (Utils.getParameterByName("opacity")) {
-      this.setOpacity(parseFloat(Utils.getParameterByName("opacity")));
-    }
-
-    if (Utils.getParameterByName("edlEnabled")) {
-      let enabled = Utils.getParameterByName("edlEnabled") === "true";
-      this.setEDLEnabled(enabled);
-    }
-
-    if (Utils.getParameterByName("edlRadius")) {
-      this.setEDLRadius(parseFloat(Utils.getParameterByName("edlRadius")));
-    }
-
-    if (Utils.getParameterByName("edlStrength")) {
-      this.setEDLStrength(parseFloat(Utils.getParameterByName("edlStrength")));
-    }
-
-    if (Utils.getParameterByName("pointBudget")) {
-      this.setPointBudget(parseFloat(Utils.getParameterByName("pointBudget")));
-    }
-
-    if (Utils.getParameterByName("showBoundingBox")) {
-      let enabled = Utils.getParameterByName("showBoundingBox") === "true";
-      if (enabled) {
-        this.setShowBoundingBox(true);
-      } else {
-        this.setShowBoundingBox(false);
-      }
-    }
-
-    if (Utils.getParameterByName("material")) {
-      let material = Utils.getParameterByName("material");
-      this.setMaterial(material);
-    }
-
-    if (Utils.getParameterByName("pointSizing")) {
-      let sizing = Utils.getParameterByName("pointSizing");
-      this.setPointSizing(sizing);
-    }
-
-    if (Utils.getParameterByName("quality")) {
-      let quality = Utils.getParameterByName("quality");
-      this.setQuality(quality);
-    }
-
-    if (Utils.getParameterByName("position")) {
-      let value = Utils.getParameterByName("position");
-      value = value.replace("[", "").replace("]", "");
-      let tokens = value.split(";");
-      let x = parseFloat(tokens[0]);
-      let y = parseFloat(tokens[1]);
-      let z = parseFloat(tokens[2]);
-
-      this.scene.view.position.set(x, y, z);
-    }
-
-    if (Utils.getParameterByName("target")) {
-      let value = Utils.getParameterByName("target");
-      value = value.replace("[", "").replace("]", "");
-      let tokens = value.split(";");
-      let x = parseFloat(tokens[0]);
-      let y = parseFloat(tokens[1]);
-      let z = parseFloat(tokens[2]);
-
-      this.scene.view.lookAt(new THREE.Vector3(x, y, z));
-    }
-
-    if (Utils.getParameterByName("background")) {
-      let value = Utils.getParameterByName("background");
-      this.setBackground(value);
-    }
-
-    // if(Utils.getParameterByName("elevationRange")){
-    //	let value = Utils.getParameterByName("elevationRange");
-    //	value = value.replace("[", "").replace("]", "");
-    //	let tokens = value.split(";");
-    //	let x = parseFloat(tokens[0]);
-    //	let y = parseFloat(tokens[1]);
-    //
-    //	this.setElevationRange(x, y);
-    //	//this.scene.view.target.set(x, y, z);
-    // }
-  }
-
-  // ------------------------------------------------------------------------------------
-  // Viewer Internals
-  // ------------------------------------------------------------------------------------
-
-  createControls() {
-    {
-      // create FIRST PERSON CONTROLS
-      this.fpControls = new FirstPersonControls(this);
-      this.fpControls.enabled = false;
-      this.fpControls.addEventListener(
-        "start",
-        this.disableAnnotations.bind(this)
-      );
-      this.fpControls.addEventListener(
-        "end",
-        this.enableAnnotations.bind(this)
-      );
-    }
-
-    // { // create GEO CONTROLS
-    //	this.geoControls = new GeoControls(this.scene.camera, this.renderer.domElement);
-    //	this.geoControls.enabled = false;
-    //	this.geoControls.addEventListener("start", this.disableAnnotations.bind(this));
-    //	this.geoControls.addEventListener("end", this.enableAnnotations.bind(this));
-    //	this.geoControls.addEventListener("move_speed_changed", (event) => {
-    //		this.setMoveSpeed(this.geoControls.moveSpeed);
-    //	});
-    // }
-
-    {
-      // create ORBIT CONTROLS
-      this.orbitControls = new OrbitControls(this, [0], true);
-      this.orbitControls.enabled = false;
-      this.orbitControls.addEventListener(
-        "start",
-        this.disableAnnotations.bind(this)
-      );
-      this.orbitControls.addEventListener(
-        "end",
-        this.enableAnnotations.bind(this)
-      );
-    }
-
-    {
-      // create ORBIT CONTROLS 2
-      this.orbitControls2 = new OrbitControls(this, [1], false);
-      this.orbitControls2.enabled = false;
-      this.orbitControls2.addEventListener(
-        "start",
-        this.disableAnnotations.bind(this)
-      );
-      this.orbitControls2.addEventListener(
-        "end",
-        this.enableAnnotations.bind(this)
-      );
-    }
-
-    {
-      // create EARTH CONTROLS
-      this.earthControls = new EarthControls(this);
-      this.earthControls.enabled = false;
-      this.earthControls.addEventListener(
-        "start",
-        this.disableAnnotations.bind(this)
-      );
-      this.earthControls.addEventListener(
-        "end",
-        this.enableAnnotations.bind(this)
-      );
-    }
-
-    {
-      // create DEVICE ORIENTATION CONTROLS
-      this.deviceControls = new DeviceOrientationControls(this);
-      this.deviceControls.enabled = false;
-      this.deviceControls.addEventListener(
-        "start",
-        this.disableAnnotations.bind(this)
-      );
-      this.deviceControls.addEventListener(
-        "end",
-        this.enableAnnotations.bind(this)
-      );
-    }
-
-    {
-      // create VR CONTROLS
-      this.vrControls = new VRControls(this);
-      this.vrControls.enabled = false;
-      this.vrControls.addEventListener(
-        "start",
-        this.disableAnnotations.bind(this)
-      );
-      this.vrControls.addEventListener(
-        "end",
-        this.enableAnnotations.bind(this)
-      );
-    }
-  }
-
-  toggleSidebar() {
-    let renderArea = $("#potree_render_area");
-    let isVisible = renderArea.css("left") !== "0px";
-
-    if (isVisible) {
-      renderArea.css("left", "0px");
-    } else {
-      renderArea.css("left", "300px");
-    }
-  }
-
-  toggleMap() {
-    // let map = $('#potree_map');
-    // map.toggle(100);
-
-    if (this.mapView) {
-      this.mapView.toggle();
-    }
-  }
-
-  onGUILoaded(callback) {
-    if (this.guiLoaded) {
-      callback();
-    } else {
-      this.guiLoadTasks.push(callback);
-    }
-  }
-
-  promiseGuiLoaded() {
-    return new Promise((resolve) => {
-      if (this.guiLoaded) {
-        resolve();
-      } else {
-        this.guiLoadTasks.push(resolve);
-      }
-    });
-  }
-
-  loadGUI(callback) {
-    if (callback) {
-      this.onGUILoaded(callback);
-    }
-
-    let viewer = this;
-    let sidebarContainer = $("#potree_sidebar_container");
-    sidebarContainer.load(
-      new URL(Potree.scriptPath + "/sidebar.html").href,
-      () => {
-        sidebarContainer.css("width", "300px");
-        sidebarContainer.css("height", "100%");
-
-        let imgMenuToggle = document.createElement("img");
-        imgMenuToggle.src = new URL(
-          Potree.resourcePath + "/icons/menu_button.svg"
-        ).href;
-        imgMenuToggle.onclick = this.toggleSidebar;
-        imgMenuToggle.classList.add("potree_menu_toggle");
-
-        let imgMapToggle = document.createElement("img");
-        imgMapToggle.src = new URL(
-          Potree.resourcePath + "/icons/map_icon.png"
-        ).href;
-        imgMapToggle.style.display = "none";
-        imgMapToggle.onclick = (e) => {
-          this.toggleMap();
-        };
-        imgMapToggle.id = "potree_map_toggle";
-
-        let elButtons = $("#potree_quick_buttons").get(0);
-
-        elButtons.append(imgMenuToggle);
-        elButtons.append(imgMapToggle);
-
-        VRButton.createButton(this.renderer).then((vrButton) => {
-          if (vrButton == null) {
-            console.log("VR not supported or active.");
-
-            return;
-          }
-
-          this.renderer.xr.enabled = true;
-
-          let element = vrButton.element;
-
-          element.style.position = "";
-          element.style.bottom = "";
-          element.style.left = "";
-          element.style.margin = "4px";
-          element.style.fontSize = "100%";
-          element.style.width = "2.5em";
-          element.style.height = "2.5em";
-          element.style.padding = "0";
-          element.style.textShadow = "black 2px 2px 2px";
-          element.style.display = "block";
-
-          elButtons.append(element);
-
-          vrButton.onStart(() => {
-            this.dispatchEvent({ type: "vr_start" });
-          });
-
-          vrButton.onEnd(() => {
-            this.dispatchEvent({ type: "vr_end" });
-          });
-        });
-
-        this.mapView = new MapView(this);
-        this.mapView.init();
-
-        i18n.init(
-          {
-            lng: "en",
-            resGetPath: Potree.resourcePath + "/lang/__lng__/__ns__.json",
-            preload: ["en", "fr", "de", "jp", "se", "es", "zh", "it", "ca"],
-            getAsync: true,
-            debug: false,
-          },
-          function (t) {
-            // Start translation once everything is loaded
-            $("body").i18n();
-          }
-        );
-
-        $(() => {
-          //initSidebar(this);
-          let sidebar = new Sidebar(this);
-          sidebar.init();
-
-          this.sidebar = sidebar;
-
-          //if (callback) {
-          //	$(callback);
-          //}
-
-          let elProfile = $("<div>").load(
-            new URL(Potree.scriptPath + "/profile.html").href,
-            () => {
-              $(document.body).append(elProfile.children());
-              this.profileWindow = new ProfileWindow(this);
-              this.profileWindowController = new ProfileWindowController(this);
-
-              $("#profile_window").draggable({
-                handle: $("#profile_titlebar"),
-                containment: $(document.body),
-              });
-              $("#profile_window").resizable({
-                containment: $(document.body),
-                handles: "n, e, s, w",
-              });
-
-              $(() => {
-                this.guiLoaded = true;
-                for (let task of this.guiLoadTasks) {
-                  task();
-                }
-              });
-            }
-          );
-        });
-      }
-    );
-
-    return this.promiseGuiLoaded();
-  }
-
-  setLanguage(lang) {
-    i18n.setLng(lang);
-    $("body").i18n();
-  }
-
-  setServer(server) {
-    this.server = server;
-  }
-
-  initDragAndDrop() {
-    function allowDrag(e) {
-      e.dataTransfer.dropEffect = "copy";
-      e.preventDefault();
-    }
-
-    let dropHandler = async (event) => {
-      console.log(event);
-      event.preventDefault();
-
-      for (const item of event.dataTransfer.items) {
-        console.log(item);
-
-        if (item.kind !== "file") {
-          continue;
-        }
-
-        const file = item.getAsFile();
-
-        const isJson5 = file.name.toLowerCase().endsWith(".json5");
-        const isGeoPackage = file.name.toLowerCase().endsWith(".gpkg");
-
-        if (isJson5) {
-          try {
-            const text = await file.text();
-            const json = JSON5.parse(text);
-
-            if (json.type === "Potree") {
-              Potree.loadProject(viewer, json);
-            }
-          } catch (e) {
-            console.error("failed to parse the dropped file as JSON");
-            console.error(e);
-          }
-        } else if (isGeoPackage) {
-          const hasPointcloud = viewer.scene.pointclouds.length > 0;
-
-          if (!hasPointcloud) {
-            let msg = "At least one point cloud is needed that specifies the ";
-            msg += "coordinate reference system before loading vector data.";
-            console.error(msg);
-          } else {
-            proj4.defs(
-              "WGS84",
-              "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
-            );
-            proj4.defs("pointcloud", this.getProjection());
-            let transform = proj4("WGS84", "pointcloud");
-
-            const buffer = await file.arrayBuffer();
-
-            const params = {
-              transform: transform,
-              source: file.name,
-            };
-
-            const geo = await Potree.GeoPackageLoader.loadBuffer(
-              buffer,
-              params
-            );
-            viewer.scene.addGeopackage(geo);
-          }
-        }
-      }
-    };
-
-    $("body")[0].addEventListener("dragenter", allowDrag);
-    $("body")[0].addEventListener("dragover", allowDrag);
-    $("body")[0].addEventListener("drop", dropHandler);
-  }
-
-  initThree() {
-    console.log(`initializing three.js ${THREE.REVISION}`);
-
-    let width = this.renderArea.clientWidth;
-    let height = this.renderArea.clientHeight;
-
-    let contextAttributes = {
-      alpha: true,
-      depth: true,
-      stencil: false,
-      antialias: false,
-      //premultipliedAlpha: _premultipliedAlpha,
-      preserveDrawingBuffer: true,
-      powerPreference: "high-performance",
-    };
-
-    // let contextAttributes = {
-    // 	alpha: false,
-    // 	preserveDrawingBuffer: true,
-    // };
-
-    // let contextAttributes = {
-    // 	alpha: false,
-    // 	preserveDrawingBuffer: true,
-    // };
-
-    let canvas = document.createElement("canvas");
-
-    let context = canvas.getContext("webgl", contextAttributes);
-
-    this.renderer = new THREE.WebGLRenderer({
-      alpha: true,
-      premultipliedAlpha: false,
-      canvas: canvas,
-      context: context,
-    });
-    this.renderer.sortObjects = false;
-    this.renderer.setSize(width, height);
-    this.renderer.autoClear = false;
-    this.renderer.setClearColor(0xffffff);
-    this.renderArea.appendChild(this.renderer.domElement);
-    this.renderer.domElement.tabIndex = "2222";
-    this.renderer.domElement.style.position = "absolute";
-    this.renderer.domElement.addEventListener("mousedown", () => {
-      this.renderer.domElement.focus();
-    });
-    //this.renderer.domElement.focus();
-
-    // NOTE: If extension errors occur, pass the string into this.renderer.extensions.get(x) before enabling
-    // enable frag_depth extension for the interpolation shader, if available
-    let gl = this.renderer.getContext();
-    gl.getExtension("EXT_frag_depth");
-    gl.getExtension("WEBGL_depth_texture");
-    gl.getExtension("WEBGL_color_buffer_float"); // Enable explicitly for more portability, EXT_color_buffer_float is the proper name in WebGL 2
-
-    if (gl.createVertexArray == null) {
-      let extVAO = gl.getExtension("OES_vertex_array_object");
-
-      if (!extVAO) {
-        throw new Error("OES_vertex_array_object extension not supported");
-      }
-
-      gl.createVertexArray = extVAO.createVertexArrayOES.bind(extVAO);
-      gl.bindVertexArray = extVAO.bindVertexArrayOES.bind(extVAO);
-    }
-  }
-
-  updateAnnotations() {
-    if (!this.visibleAnnotations) {
-      this.visibleAnnotations = new Set();
-    }
-
-    this.scene.annotations.updateBounds();
-    this.scene.cameraP.updateMatrixWorld();
-    this.scene.cameraO.updateMatrixWorld();
-
-    let distances = [];
-
-    let renderAreaSize = this.renderer.getSize(new THREE.Vector2());
-
-    let viewer = this;
-
-    let visibleNow = [];
-    this.scene.annotations.traverse((annotation) => {
-      if (annotation === this.scene.annotations) {
-        return true;
-      }
-
-      if (!annotation.visible) {
-        return false;
-      }
-
-      annotation.scene = this.scene;
-
-      let element = annotation.domElement;
-
-      let position = annotation.position.clone();
-      position.add(annotation.offset);
-      if (!position) {
-        position = annotation.boundingBox.getCenter(new THREE.Vector3());
-      }
-
-      let distance = viewer.scene.cameraP.position.distanceTo(position);
-      let radius = annotation.boundingBox.getBoundingSphere(
-        new THREE.Sphere()
-      ).radius;
-
-      let screenPos = new THREE.Vector3();
-      let screenSize = 0;
-
-      {
-        // SCREEN POS
-        screenPos.copy(position).project(this.scene.getActiveCamera());
-        screenPos.x = (renderAreaSize.x * (screenPos.x + 1)) / 2;
-        screenPos.y = renderAreaSize.y * (1 - (screenPos.y + 1) / 2);
-
-        // SCREEN SIZE
-        if (viewer.scene.cameraMode == CameraMode.PERSPECTIVE) {
-          let fov = (Math.PI * viewer.scene.cameraP.fov) / 180;
-          let slope = Math.tan(fov / 2.0);
-          let projFactor = (0.5 * renderAreaSize.y) / (slope * distance);
-          screenSize = radius * projFactor;
-        } else {
-          screenSize = Utils.projectedRadiusOrtho(
-            radius,
-            viewer.scene.cameraO.projectionMatrix,
-            renderAreaSize.x,
-            renderAreaSize.y
-          );
-        }
-      }
-
-      element.css("left", screenPos.x + "px");
-      element.css("top", screenPos.y + "px");
-      //element.css("display", "block");
-
-      let zIndex = 10000000 - distance * (10000000 / this.scene.cameraP.far);
-      if (annotation.descriptionVisible) {
-        zIndex += 10000000;
-      }
-      element.css("z-index", parseInt(zIndex));
-
-      if (annotation.children.length > 0) {
-        let expand =
-          screenSize > annotation.collapseThreshold ||
-          annotation.boundingBox.containsPoint(
-            this.scene.getActiveCamera().position
-          );
-        annotation.expand = expand;
-
-        if (!expand) {
-          //annotation.display = (screenPos.z >= -1 && screenPos.z <= 1);
-          let inFrustum = screenPos.z >= -1 && screenPos.z <= 1;
-          if (inFrustum) {
-            visibleNow.push(annotation);
-          }
-        }
-
-        return expand;
-      } else {
-        //annotation.display = (screenPos.z >= -1 && screenPos.z <= 1);
-        let inFrustum = screenPos.z >= -1 && screenPos.z <= 1;
-        if (inFrustum) {
-          visibleNow.push(annotation);
-        }
-      }
-    });
-
-    let notVisibleAnymore = new Set(this.visibleAnnotations);
-    for (let annotation of visibleNow) {
-      annotation.display = true;
-
-      notVisibleAnymore.delete(annotation);
-    }
-    this.visibleAnnotations = visibleNow;
-
-    for (let annotation of notVisibleAnymore) {
-      annotation.display = false;
-    }
-  }
-
-  updateMaterialDefaults(pointcloud) {
-    // PROBLEM STATEMENT:
-    // * [min, max] of intensity, source id, etc. are computed as point clouds are loaded
-    // * the point cloud material won't know the range it should use until some data is loaded
-    // * users can modify the range at runtime, but sensible default ranges should be
-    //   applied even if no GUI is present
-    // * display ranges shouldn't suddenly change even if the actual range changes over time.
-    //   e.g. the root node has intensity range [1, 478]. One of the descendants increases range to
-    //   [0, 2047]. We should not automatically change to the new range because that would result
-    //   in sudden and drastic changes of brightness. We should adjust the min/max of the sidebar slider.
-
-    const material = pointcloud.material;
-
-    const attIntensity = pointcloud.getAttribute("intensity");
-
-    if (attIntensity != null && material.intensityRange[0] === Infinity) {
-      material.intensityRange = [...attIntensity.range];
-    }
-
-    // const attIntensity = pointcloud.getAttribute("intensity");
-    // if(attIntensity && material.intensityRange[0] === Infinity){
-    // 	material.intensityRange = [...attIntensity.range];
-    // }
-
-    // let attributes = pointcloud.getAttributes();
-
-    // for(let attribute of attributes.attributes){
-    // 	if(attribute.range){
-    // 		let range = [...attribute.range];
-    // 		material.computedRange.set(attribute.name, range);
-    // 		//material.setRange(attribute.name, range);
-    // 	}
-    // }
-  }
-
-  update(delta, timestamp) {
-    if (Potree.measureTimings) performance.mark("update-start");
-
-    this.dispatchEvent({
-      type: "update_start",
-      delta: delta,
-      timestamp: timestamp,
-    });
-
-    for (
-      let scissorIdx = 0;
-      scissorIdx < this.scissorZones.length;
-      scissorIdx++
-    ) {
-      const scene = this.scissorZones[scissorIdx].scene;
-      const camera = this.getCamera(scissorIdx);
-      const visiblePointClouds = scene.pointclouds.filter((pc) => pc.visible);
-
-      Potree.pointLoadLimit = Potree.pointBudget * 2;
-
-      const lTarget = camera.position
-        .clone()
-        .add(
-          camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000)
-        );
-      this.scissorZones[scissorIdx].scene.directionalLight.position.copy(
-        camera.position
-      );
-      this.scissorZones[scissorIdx].scene.directionalLight.lookAt(lTarget);
-
-      for (let pointcloud of visiblePointClouds) {
-        pointcloud.showBoundingBox = this.showBoundingBox;
-        pointcloud.generateDEM = this.generateDEM;
-        pointcloud.minimumNodePixelSize = this.minNodeSize;
-
-        let material = pointcloud.material;
-
-        material.uniforms.uFilterReturnNumberRange.value =
-          this.filterReturnNumberRange;
-        material.uniforms.uFilterNumberOfReturnsRange.value =
-          this.filterNumberOfReturnsRange;
-        material.uniforms.uFilterGPSTimeClipRange.value =
-          this.filterGPSTimeRange;
-        material.uniforms.uFilterPointSourceIDClipRange.value =
-          this.filterPointSourceIDRange;
-
-        material.classification = this.classifications;
-        material.recomputeClassification();
-
-        this.updateMaterialDefaults(pointcloud);
-      }
-
-      {
-        if (this.showBoundingBox) {
-          let bbRoot = this.scissorZones[
-            scissorIdx
-          ].scene.scene.getObjectByName("potree_bounding_box_root");
-          if (!bbRoot) {
-            let node = new THREE.Object3D();
-            node.name = "potree_bounding_box_root";
-            this.scissorZones[scissorIdx].scene.scene.add(node);
-            bbRoot = node;
-          }
-
-          let visibleBoxes = [];
-          for (let pointcloud of this.scissorZones[scissorIdx].scene
-            .pointclouds) {
-            for (let node of pointcloud.visibleNodes.filter(
-              (vn) => vn.boundingBoxNode !== undefined
-            )) {
-              let box = node.boundingBoxNode;
-              visibleBoxes.push(box);
-            }
-          }
-
-          bbRoot.children = visibleBoxes;
-        }
-      }
-
-      if (!this.freeze) {
-        let result = Potree.updatePointClouds(
-          scene.pointclouds,
-          camera,
-          this.renderer
-        );
-
-        // DEBUG - ONLY DISPLAY NODES THAT INTERSECT MOUSE
-        //if(false){
-
-        //	let renderer = viewer.renderer;
-        //	let mouse = viewer.inputHandler.mouse;
-
-        //	let nmouse = {
-        //		x: (mouse.x / renderer.domElement.clientWidth) * 2 - 1,
-        //		y: -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
-        //	};
-
-        //	let pickParams = {};
-
-        //	//if(params.pickClipped){
-        //	//	pickParams.pickClipped = params.pickClipped;
-        //	//}
-
-        //	pickParams.x = mouse.x;
-        //	pickParams.y = renderer.domElement.clientHeight - mouse.y;
-
-        //	let raycaster = new THREE.Raycaster();
-        //	raycaster.setFromCamera(nmouse, camera);
-        //	let ray = raycaster.ray;
-
-        //	for(let pointcloud of scene.pointclouds){
-        //		let nodes = pointcloud.nodesOnRay(pointcloud.visibleNodes, ray);
-        //		pointcloud.visibleNodes = nodes;
-
-        //	}
-        //}
-
-        // const tStart = performance.now();
-        // const worldPos = new THREE.Vector3();
-        // const camPos = viewer.scene.getActiveCamera().getWorldPosition(new THREE.Vector3());
-        // let lowestDistance = Infinity;
-        // let numNodes = 0;
-
-        // viewer.scene.scene.traverse(node => {
-        // 	node.getWorldPosition(worldPos);
-
-        // 	const distance = worldPos.distanceTo(camPos);
-
-        // 	lowestDistance = Math.min(lowestDistance, distance);
-
-        // 	numNodes++;
-
-        // 	if(Number.isNaN(distance)){
-        // 		console.error(":(");
-        // 	}
-        // });
-        // const duration = (performance.now() - tStart).toFixed(2);
-
-        // Potree.debug.computeNearDuration = duration;
-        // Potree.debug.numNodes = numNodes;
-
-        //console.log(lowestDistance.toString(2), duration);
-
-        const tStart = performance.now();
-        const campos = camera.position;
-        let closestImage = Infinity;
-        for (const images of this.scissorZones[scissorIdx].scene
-          .orientedImages) {
-          for (const image of images.images) {
-            const distance = image.mesh.position.distanceTo(campos);
-
-            closestImage = Math.min(closestImage, distance);
-          }
-        }
-        const tEnd = performance.now();
-
-        if (result.lowestSpacing !== Infinity) {
-          let near = result.lowestSpacing * 10.0;
-          let far = -this.getBoundingBox().applyMatrix4(
-            camera.matrixWorldInverse
-          ).min.z;
-
-          far = Math.max(far * 1.5, 10000);
-          near = Math.min(100.0, Math.max(0.01, near));
-          near = Math.min(near, closestImage);
-          far = Math.max(far, near + 10000);
-
-          if (near === Infinity) {
-            near = 0.1;
-          }
-
-          camera.near = near;
-          camera.far = far;
-        } else {
-          // don't change near and far in this case
-        }
-
-        if (
-          this.scissorZones[scissorIdx].scene.views[
-            this.scissorZones[scissorIdx].viewIdxInScene
-          ].cameraMode == CameraMode.ORTHOGRAPHIC
-        ) {
-          camera.near = -camera.far;
-        }
-      }
-
-      let cameraP =
-        this.scissorZones[scissorIdx].scene.views[
-          this.scissorZones[scissorIdx].viewIdxInScene
-        ].cameraP;
-      let cameraO =
-        this.scissorZones[scissorIdx].scene.views[
-          this.scissorZones[scissorIdx].viewIdxInScene
-        ].cameraO;
-      cameraP.fov = this.fov;
-
-      let controls = this.getControls(scissorIdx);
-      if (controls === this.deviceControls) {
-        this.scissorZones[idx].controls.setScene(scene);
-        this.scissorZones[idx].controls.update(delta);
-
-        cameraP.position.copy(this.getView(scissorIdx).position);
-        cameraO.position.copy(this.getView(scissorIdx).position);
-      } else if (controls !== null) {
-        controls.setScene(scene);
-        controls.update(delta);
-
-        // "YZX" looks better than "ZXY" now that Y rotation can be nonzero.
-        if (typeof debugDisabled === "undefined") {
-          cameraP.position.copy(this.getView(scissorIdx).position);
-          cameraP.rotation.order = "YZX";
-          cameraP.rotation.x = Math.PI / 2 + this.getView(scissorIdx).pitch;
-          cameraP.rotation.y = this.getView(scissorIdx).roll;
-          cameraP.rotation.z = this.getView(scissorIdx).yaw;
-        }
-
-        cameraO.position.copy(this.getView(scissorIdx).position);
-        cameraO.rotation.order = "YZX";
-        cameraO.rotation.x = Math.PI / 2 + this.getView(scissorIdx).pitch;
-        cameraO.rotation.y = this.getView(scissorIdx).roll;
-        cameraO.rotation.z = this.getView(scissorIdx).yaw;
-      }
-
-      camera.updateMatrix();
-      camera.updateMatrixWorld();
-      camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
-
-      {
-        if (this._previousCamera === undefined) {
-          this._previousCamera = this.getCamera(scissorIdx).clone();
-          this._previousCamera.rotation.copy(
-            this.getCamera(scissorIdx).rotation
-          );
-        }
-
-        if (!this._previousCamera.matrixWorld.equals(camera.matrixWorld)) {
-          this.dispatchEvent({
-            type: "camera_changed",
-            previous: this._previousCamera,
-            camera: camera,
-          });
-        } else if (
-          !this._previousCamera.projectionMatrix.equals(camera.projectionMatrix)
-        ) {
-          this.dispatchEvent({
-            type: "camera_changed",
-            previous: this._previousCamera,
-            camera: camera,
-          });
-        }
-
-        this._previousCamera = this.getCamera(scissorIdx).clone();
-        this._previousCamera.rotation.copy(this.getCamera(scissorIdx).rotation);
-      }
-
-      {
-        // update clip boxes
-        let boxes = [];
-
-        // volumes with clipping enabled
-        //boxes.push(...this.scissorZones[scissorIdx].scene.volumes.filter(v => (v.clip)));
-        boxes.push(
-          ...this.scissorZones[scissorIdx].scene.volumes.filter(
-            (v) => v.clip && v instanceof BoxVolume
-          )
-        );
-
-        // profile segments
-        for (let profile of this.scissorZones[scissorIdx].scene.profiles) {
-          boxes.push(...profile.boxes);
-        }
-
-        // Needed for .getInverse(), pre-empt a determinant of 0, see #815 / #816
-        let degenerate = (box) => box.matrixWorld.determinant() !== 0;
-
-        let clipBoxes = boxes.filter(degenerate).map((box) => {
-          box.updateMatrixWorld();
-
-          let boxInverse = box.matrixWorld.clone().invert();
-          let boxPosition = box.getWorldPosition(new THREE.Vector3());
-
-          return { box: box, inverse: boxInverse, position: boxPosition };
-        });
-
-        let clipPolygons = this.scissorZones[
-          scissorIdx
-        ].scene.polygonClipVolumes.filter((vol) => vol.initialized);
-
-        // set clip volumes in material
-        for (let pointcloud of visiblePointClouds) {
-          pointcloud.material.setClipBoxes(clipBoxes);
-          pointcloud.material.setClipPolygons(
-            clipPolygons,
-            this.clippingTool.maxPolygonVertices
-          );
-          pointcloud.material.clipTask = this.clipTask;
-          pointcloud.material.clipMethod = this.clipMethod;
-        }
-      }
-
-      {
-        for (let pointcloud of visiblePointClouds) {
-          pointcloud.material.elevationGradientRepeat =
-            this.elevationGradientRepeat;
-        }
-      }
-
-      {
-        // update navigation cube, only for the first scissor zone in the list
-        if (scissorIdx == 0) this.navigationCube.update(camera.rotation);
-      }
-    }
-
-    this.updateAnnotations();
-
-    if (this.mapView) {
-      this.mapView.update(delta);
-      if (this.mapView.sceneProjection) {
-        $("#potree_map_toggle").css("display", "block");
-      }
-    }
-
-    TWEEN.update(timestamp);
-
-    this.dispatchEvent({
-      type: "update",
-      delta: delta,
-      timestamp: timestamp,
-    });
-
-    if (Potree.measureTimings) {
-      performance.mark("update-end");
-      performance.measure("update", "update-start", "update-end");
-    }
-  }
-
-  getPRenderer() {
-    if (this.useHQ) {
-      if (!this.hqRenderer) {
-        this.hqRenderer = new HQSplatRenderer(this);
-      }
-      this.hqRenderer.useEDL = this.useEDL;
-
-      return this.hqRenderer;
-    } else {
-      if (this.useEDL && Features.SHADER_EDL.isSupported()) {
-        if (!this.edlRenderer) {
-          this.edlRenderer = new EDLRenderer(this);
-        }
-
-        return this.edlRenderer;
-      } else {
-        if (!this.potreeRenderer) {
-          this.potreeRenderer = new PotreeRenderer(this);
-        }
-
-        return this.potreeRenderer;
-      }
-    }
-  }
-
-  renderVR() {
-    let renderer = this.renderer;
-
-    renderer.setClearColor(0x550000, 0);
-    renderer.clear();
-
-    let xr = renderer.xr;
-    let dbg = new THREE.PerspectiveCamera();
-    let xrCameras = xr.getCamera(dbg);
-
-    if (xrCameras.cameras.length !== 2) {
-      return;
-    }
-
-    let makeCam = this.vrControls.getCamera.bind(this.vrControls);
-
-    {
-      // clear framebuffer
-      if (viewer.background === "skybox") {
-        renderer.setClearColor(0xff0000, 1);
-      } else if (viewer.background === "gradient") {
-        renderer.setClearColor(0x112233, 1);
-      } else if (viewer.background === "black") {
-        renderer.setClearColor(0x000000, 1);
-      } else if (viewer.background === "white") {
-        renderer.setClearColor(0xffffff, 1);
-      } else {
-        renderer.setClearColor(0x000000, 0);
-      }
-
-      renderer.clear();
-    }
-
-    // render background
-    if (this.background === "skybox") {
-      let { skybox } = this;
-
-      let cam = makeCam();
-      skybox.camera.rotation.copy(cam.rotation);
-      skybox.camera.fov = cam.fov;
-      skybox.camera.aspect = cam.aspect;
-
-      // let dbg = new THREE.Object3D();
-      let dbg = skybox.parent;
-      // dbg.up.set(0, 0, 1);
-      dbg.rotation.x = Math.PI / 2;
-
-      // skybox.camera.parent = dbg;
-      // dbg.children.push(skybox.camera);
-
-      dbg.updateMatrix();
-      dbg.updateMatrixWorld();
-
-      skybox.camera.updateMatrix();
-      skybox.camera.updateMatrixWorld();
-      skybox.camera.updateProjectionMatrix();
-
-      renderer.render(skybox.scene, skybox.camera);
-      // renderer.render(skybox.scene, cam);
-    } else if (this.background === "gradient") {
-      // renderer.render(this.scene.sceneBG, this.scene.cameraBG);
-    }
-
-    this.renderer.xr.getSession().updateRenderState({
-      depthNear: 0.1,
-      depthFar: 10000,
-    });
-
-    let cam = null;
-    let view = null;
-
-    {
-      // render world scene
-      cam = makeCam();
-      cam.position.z -= 0.8 * cam.scale.x;
-      cam.parent = null;
-      // cam.near = 0.05;
-      cam.near = viewer.scene.getActiveCamera().near;
-      cam.far = viewer.scene.getActiveCamera().far;
-      cam.updateMatrix();
-      cam.updateMatrixWorld();
-
-      this.scene.scene.updateMatrix();
-      this.scene.scene.updateMatrixWorld();
-      this.scene.scene.matrixAutoUpdate = false;
-
-      let camWorld = cam.matrixWorld.clone();
-      view = camWorld.clone().invert();
-      this.scene.scene.matrix.copy(view);
-      this.scene.scene.matrixWorld.copy(view);
-
-      cam.matrix.identity();
-      cam.matrixWorld.identity();
-      cam.matrixWorldInverse.identity();
-
-      renderer.render(this.scene.scene, cam);
-
-      this.scene.scene.matrixWorld.identity();
-    }
-
-    for (let pointcloud of this.scene.pointclouds) {
-      let viewport = xrCameras.cameras[0].viewport;
-
-      pointcloud.material.useEDL = false;
-      pointcloud.screenHeight = viewport.height;
-      pointcloud.screenWidth = viewport.width;
-
-      // automatically switch to paraboloids because they cause far less flickering in VR,
-      // when point sizes are larger than around 2 pixels
-      // if(Features.SHADER_INTERPOLATION.isSupported()){
-      // 	pointcloud.material.shape = Potree.PointShape.PARABOLOID;
-      // }
-    }
-
-    // render point clouds
-    for (let xrCamera of xrCameras.cameras) {
-      let v = xrCamera.viewport;
-      renderer.setViewport(v.x, v.y, v.width, v.height);
-
-      // xrCamera.fov = 90;
-
-      {
-        // estimate VR fov
-        let proj = xrCamera.projectionMatrix;
-        let inv = proj.clone().invert();
-
-        let p1 = new THREE.Vector4(0, 1, -1, 1).applyMatrix4(inv);
-        let rad = p1.y;
-        let fov = 180 * (rad / Math.PI);
-
-        xrCamera.fov = fov;
-      }
-
-      for (let pointcloud of this.scene.pointclouds) {
-        const { material } = pointcloud;
-        material.useEDL = false;
-      }
-
-      let vrWorld = view.clone().invert();
-      vrWorld.multiply(xrCamera.matrixWorld);
-      let vrView = vrWorld.clone().invert();
-
-      this.pRenderer.render(this.scene.scenePointCloud, xrCamera, null, {
-        viewOverride: vrView,
-      });
-    }
-
-    {
-      // render VR scene
-      let cam = makeCam();
-      cam.parent = null;
-
-      renderer.render(this.sceneVR, cam);
-    }
-
-    renderer.resetState();
-  }
-
-  renderDefault() {
-    let pRenderer = this.getPRenderer();
-
-    const width = this.scaleFactor * this.renderArea.clientWidth;
-    const height = this.scaleFactor * this.renderArea.clientHeight;
-
-    {
-      // resize
-      this.renderer.setSize(width, height);
-      const pixelRatio = this.renderer.getPixelRatio();
-
-      for (
-        let scissorZoneIdx = 0;
-        scissorZoneIdx < this.scissorZones.length;
-        scissorZoneIdx++
-      ) {
-        const viewport = this.getViewport(scissorZoneIdx);
-        const aspect = viewport.width / viewport.height;
-
-        const scene = this.scissorZones[scissorZoneIdx].scene;
-        let cameraHolder =
-          scene.views[this.scissorZones[scissorZoneIdx].viewIdxInScene];
-
-        scene.cameraP.aspect = aspect;
-        scene.cameraP.updateProjectionMatrix();
-
-        let frustumScale = this.getView(scissorZoneIdx).radius;
-        cameraHolder.cameraO.left = -frustumScale;
-        cameraHolder.cameraO.right = frustumScale;
-        cameraHolder.cameraO.top = (frustumScale * 1) / aspect;
-        cameraHolder.cameraO.bottom = (-frustumScale * 1) / aspect;
-        cameraHolder.cameraO.updateProjectionMatrix();
-
-        scene.cameraScreenSpace.top = 1 / aspect;
-        scene.cameraScreenSpace.bottom = -1 / aspect;
-        scene.cameraScreenSpace.updateProjectionMatrix();
-      }
-    }
-
-    // Clear full canvas
-    this.renderer.setScissor(0, 0, width, height);
-    this.renderer.clear();
-
-    for (
-      let scissorZoneIdx = 0;
-      scissorZoneIdx < this.scissorZones.length;
-      scissorZoneIdx++
-    ) {
-      const zone = this.scissorZones[scissorZoneIdx];
-      if (!zone.visible) continue;
-      if (
-        zone.scissor.top < zone.scissor.bottom ||
-        zone.scissor.right < zone.scissor.left
-      )
-        continue;
-      this.renderer.setScissor(this.getScissor(scissorZoneIdx));
-      this.renderer.setViewport(this.getViewport(scissorZoneIdx));
-      this.renderer.setScissorTest(true);
-      // Code for making two mini canvases render the same scene
-      // but one of them toggles the visible and _visible properties of some items.
-      /*
+			let elErrorMessage = elFailPage.find('#potree_error_console');
+			elErrorMessage.html(error.stack);
+
+			$(this.renderArea).append(elFailPage);
+		}
+
+		throw error;
+	}
+
+	// Getters and setters to support old code.
+	get moveSpeed() {
+		if (this.scissorZones.length > 0) return this.scissorZones[0].moveSpeed;
+		else return null;
+	}
+	set moveSpeed(val) {
+		if (this.scissorZones.length > 0) this.scissorZones[0].moveSpeed = val;
+	}
+	get scene() {
+		if (this.scissorZones.length > 0) return this.scissorZones[0].scene;
+		else return null;
+	}
+	set scene(val) {
+		if (this.scissorZones.length > 0) this.scissorZones[0].scene = val;
+	}
+	get controls() {
+		if (this.scissorZones.length > 0) return this.scissorZones[0].controls;
+		else return null;
+	}
+	set controls(val) {
+		if (this.scissorZones.length > 0) this.scissorZones[0].controls = val;
+	}
+
+	// Better getters and setters.
+	getCamera(idx) {
+		const zone = this.scissorZones[idx];
+		return zone.scene.getActiveCamera(zone.viewIdxInScene);
+	}
+	getView(idx) {
+		const zone = this.scissorZones[idx];
+		return zone.scene.views[zone.viewIdxInScene].view;
+	}
+	getScissor(idx, ignoreViewportScissoring = false) {
+		if (!ignoreViewportScissoring && this.scissorZones[idx].viewportScissoring)
+			return this.getViewport(idx);
+
+		const zone = this.scissorZones[idx].scissor;
+		const width = this.renderArea.clientWidth;
+		const height = this.renderArea.clientHeight;
+
+		return new THREE.Vector4(
+			zone.left * width,
+			zone.bottom * height,
+			(zone.right - zone.left) * width,
+			(zone.top - zone.bottom) * height
+		);
+	}
+	getViewport(idx) {
+		const scissor = this.getScissor(idx, true);
+		const viewport = this.scissorZones[idx].viewport;
+		// Call Math.min or Math.max depending on fitInside.
+		let requiredScale = (
+			this.scissorZones[idx].fitInside ? Math.min : Math.max
+		)(
+			scissor.width / (viewport.right - viewport.left),
+			scissor.height / (viewport.top - viewport.bottom)
+		);
+		let viewportScale = [
+			(viewport.right - viewport.left) * requiredScale,
+			(viewport.top - viewport.bottom) * requiredScale,
+		];
+		// Center of the scissor box will be the center of viewport as well.
+		let viewportCenter = [
+			scissor.x + scissor.width / 2,
+			scissor.y + scissor.height / 2,
+		];
+		const width = this.renderArea.clientWidth;
+		const height = this.renderArea.clientHeight;
+		// Makes the mini canvas (idx 1) always go to the top left of avilable space instead of the center.
+		if(idx === 1) {
+			return new THREE.Vector4(
+				0,
+				height - viewportScale[1],
+				viewportScale[0],
+				viewportScale[1]
+			);
+		}
+		return new THREE.Vector4(
+			viewportCenter[0] - viewportScale[0] / 2,
+			viewportCenter[1] - viewportScale[1] / 2,
+			viewportScale[0],
+			viewportScale[1]
+		);
+	}
+
+	// ------------------------------------------------------------------------------------
+	// Viewer API
+	// ------------------------------------------------------------------------------------
+
+	setScene (scene, idx = 0) {
+		if (idx >= this.scissorZones.length) {
+			console.log("Out of bounds access to scissorZones");
+			return;
+		}
+		if (scene === this.scissorZones[idx].scene) {
+			return;
+		}
+
+		let oldScene = this.scissorZones[idx].scene;
+		this.scissorZones[idx].scene = scene;
+
+		this.dispatchEvent({
+			type: 'scene_changed',
+			oldScene: oldScene,
+			scene: scene
+		});
+
+		{ // Annotations
+			$('.annotation').detach();
+
+			// for(let annotation of this.scene.annotations){
+			//	this.renderArea.appendChild(annotation.domElement[0]);
+			// }
+
+			this.scissorZones[idx].scene.annotations.traverse(annotation => {
+				this.renderArea.appendChild(annotation.domElement[0]);
+			});
+
+			if (!this.onAnnotationAdded) {
+				this.onAnnotationAdded = e => {
+				// console.log("annotation added: " + e.annotation.title);
+
+					e.annotation.traverse(node => {
+
+						$("#potree_annotation_container").append(node.domElement);
+						//this.renderArea.appendChild(node.domElement[0]);
+						node.scene = this.scissorZones[idx].scene;
+					});
+				};
+			}
+
+			if (oldScene) {
+				oldScene.annotations.removeEventListener('annotation_added', this.onAnnotationAdded);
+			}
+			this.scissorZones[idx].scene.annotations.addEventListener('annotation_added', this.onAnnotationAdded);
+		}
+	};
+
+	setControls(controls, idx = 0){
+		if (idx >= this.scissorZones.length) {
+			console.log("Out of bounds access to scissorZones");
+			return;
+		}
+
+		if (controls !== this.scissorZones[idx].controls) {
+			if (this.scissorZones[idx].controls) {
+				this.scissorZones[idx].controls.enabled = false;
+				this.inputHandler.removeInputListener(this.scissorZones[idx].controls);
+			}
+
+			this.scissorZones[idx].controls = controls;
+			this.scissorZones[idx].controls.enabled = true;
+			this.inputHandler.addInputListener(this.scissorZones[idx].controls);
+		}
+	}
+
+	getControls (idx = 0) {
+
+		if(this.renderer.xr.isPresenting){
+			return this.vrControls;
+		}else{
+			return this.scissorZones[idx].controls;
+		}
+		
+	}
+
+	getMinNodeSize () {
+		return this.minNodeSize;
+	};
+
+	setMinNodeSize (value) {
+		if (this.minNodeSize !== value) {
+			this.minNodeSize = value;
+			this.dispatchEvent({'type': 'minnodesize_changed', 'viewer': this});
+		}
+	};
+
+	getBackground () {
+		return this.background;
+	}
+
+	setBackground(bg){
+		if (this.background === bg) {
+			return;
+		}
+
+		if(bg === "skybox"){
+			this.skybox = Utils.loadSkybox(new URL(Potree.resourcePath + '/textures/skybox2/').href);
+		}
+
+		this.background = bg;
+		this.dispatchEvent({'type': 'background_changed', 'viewer': this});
+	}
+
+	setDescription (value) {
+		this.description = value;
+		
+		$('#potree_description').html(value);
+		//$('#potree_description').text(value);
+	}
+
+	getDescription(){
+		return this.description;
+	}
+
+	setShowBoundingBox (value) {
+		if (this.showBoundingBox !== value) {
+			this.showBoundingBox = value;
+			this.dispatchEvent({'type': 'show_boundingbox_changed', 'viewer': this});
+		}
+	};
+
+	getShowBoundingBox () {
+		return this.showBoundingBox;
+	};
+
+	setMoveSpeed (value, idx = 0) {
+		if (idx >= this.scissorZones.length) {
+			console.log("Out of bounds access to scissorZones");
+			return;
+		}
+
+		if (this.scissorZones[idx].moveSpeed !== value) {
+			this.scissorZones[idx].moveSpeed = value;
+			this.dispatchEvent({'type': 'move_speed_changed', 'viewer': this, 'speed': value, 'idx': idx});
+		}
+	};
+
+	getMoveSpeed (idx = 0) {
+		return this.scissorZones[idx].moveSpeed;
+	};
+
+	setWeightClassification (w) {
+		for (let i = 0; i < this.scene.pointclouds.length; i++) {
+			this.scene.pointclouds[i].material.weightClassification = w;
+			this.dispatchEvent({'type': 'attribute_weights_changed' + i, 'viewer': this});
+		}
+	};
+
+	setFreeze (value) {
+		value = Boolean(value);
+		if (this.freeze !== value) {
+			this.freeze = value;
+			this.dispatchEvent({'type': 'freeze_changed', 'viewer': this});
+		}
+	};
+
+	getFreeze () {
+		return this.freeze;
+	};
+
+	getClipTask(){
+		return this.clipTask;
+	}
+
+	getClipMethod(){
+		return this.clipMethod;
+	}
+
+	setClipTask(value){
+		if(this.clipTask !== value){
+
+			this.clipTask = value;
+
+			this.dispatchEvent({
+				type: "cliptask_changed", 
+				viewer: this});		
+		}
+	}
+
+	setClipMethod(value){
+		if(this.clipMethod !== value){
+
+			this.clipMethod = value;
+			
+			this.dispatchEvent({
+				type: "clipmethod_changed",
+				viewer: this});
+		}
+	}
+
+	setElevationGradientRepeat(value){
+		if(this.elevationGradientRepeat !== value){
+
+			this.elevationGradientRepeat = value;
+
+			this.dispatchEvent({
+				type: "elevation_gradient_repeat_changed", 
+				viewer: this});
+		}
+	}
+
+	setPointBudget (value) {
+		if (Potree.pointBudget !== value) {
+			Potree.pointBudget = parseInt(value);
+			this.dispatchEvent({'type': 'point_budget_changed', 'viewer': this});
+		}
+	};
+
+	getPointBudget () {
+		return Potree.pointBudget;
+	};
+
+	setShowAnnotations (value) {
+		if (this.showAnnotations !== value) {
+			this.showAnnotations = value;
+			this.dispatchEvent({'type': 'show_annotations_changed', 'viewer': this});
+		}
+	}
+
+	getShowAnnotations () {
+		return this.showAnnotations;
+	}
+	
+	setDEMCollisionsEnabled(value){
+		if(this.useDEMCollisions !== value){
+			this.useDEMCollisions = value;
+			this.dispatchEvent({'type': 'use_demcollisions_changed', 'viewer': this});
+		};
+	};
+
+	getDEMCollisionsEnabled () {
+		return this.useDEMCollisions;
+	};
+
+	setEDLEnabled (value) {
+		value = Boolean(value) && Features.SHADER_EDL.isSupported();
+
+		if (this.useEDL !== value) {
+			this.useEDL = value;
+			this.dispatchEvent({'type': 'use_edl_changed', 'viewer': this});
+		}
+	};
+
+	getEDLEnabled () {
+		return this.useEDL;
+	};
+
+	setEDLRadius (value) {
+		if (this.edlRadius !== value) {
+			this.edlRadius = value;
+			this.dispatchEvent({'type': 'edl_radius_changed', 'viewer': this});
+		}
+	};
+
+	getEDLRadius () {
+		return this.edlRadius;
+	};
+
+	setEDLStrength (value) {
+		if (this.edlStrength !== value) {
+			this.edlStrength = value;
+			this.dispatchEvent({'type': 'edl_strength_changed', 'viewer': this});
+		}
+	};
+
+	getEDLStrength () {
+		return this.edlStrength;
+	};
+
+	setEDLOpacity (value) {
+		if (this.edlOpacity !== value) {
+			this.edlOpacity = value;
+			this.dispatchEvent({'type': 'edl_opacity_changed', 'viewer': this});
+		}
+	};
+
+	getEDLOpacity () {
+		return this.edlOpacity;
+	};
+
+	setFOV (value) {
+		if (this.fov !== value) {
+			this.fov = value;
+			this.dispatchEvent({'type': 'fov_changed', 'viewer': this});
+		}
+	};
+
+	getFOV () {
+		return this.fov;
+	};
+
+	disableAnnotations () {
+		this.scene.annotations.traverse(annotation => {
+			annotation.domElement.css('pointer-events', 'none');
+
+			// return annotation.visible;
+		});
+	};
+
+	enableAnnotations () {
+		this.scene.annotations.traverse(annotation => {
+			annotation.domElement.css('pointer-events', 'auto');
+
+			// return annotation.visible;
+		});
+	}
+
+	setClassifications(classifications){
+		this.classifications = classifications;
+
+		this.dispatchEvent({'type': 'classifications_changed', 'viewer': this});
+	}
+
+	setClassificationVisibility (key, value) {
+		if (!this.classifications[key]) {
+			this.classifications[key] = {visible: value, name: 'no name'};
+			this.dispatchEvent({'type': 'classification_visibility_changed', 'viewer': this});
+		} else if (this.classifications[key].visible !== value) {
+			this.classifications[key].visible = value;
+			this.dispatchEvent({'type': 'classification_visibility_changed', 'viewer': this});
+		}
+	}
+
+	toggleAllClassificationsVisibility(){
+
+		let numVisible = 0;
+		let numItems = 0;
+		for(const key of Object.keys(this.classifications)){
+			if(this.classifications[key].visible){
+				numVisible++;
+			}
+			numItems++;
+		}
+
+		let visible = true;
+		if(numVisible === numItems){
+			visible = false;
+		}
+
+		let somethingChanged = false;
+
+		for(const key of Object.keys(this.classifications)){
+			if(this.classifications[key].visible !== visible){
+				this.classifications[key].visible = visible;
+				somethingChanged = true;
+			}
+		}
+
+		if(somethingChanged){
+			this.dispatchEvent({'type': 'classification_visibility_changed', 'viewer': this});
+		}
+	}
+
+	setFilterReturnNumberRange(from, to){
+		this.filterReturnNumberRange = [from, to];
+		this.dispatchEvent({'type': 'filter_return_number_range_changed', 'viewer': this});
+	}
+
+	setFilterNumberOfReturnsRange(from, to){
+		this.filterNumberOfReturnsRange = [from, to];
+		this.dispatchEvent({'type': 'filter_number_of_returns_range_changed', 'viewer': this});
+	}
+
+	setFilterGPSTimeRange(from, to){
+		this.filterGPSTimeRange = [from, to];
+		this.dispatchEvent({'type': 'filter_gps_time_range_changed', 'viewer': this});
+	}
+
+	setFilterPointSourceIDRange(from, to){
+		this.filterPointSourceIDRange = [from, to]
+		this.dispatchEvent({'type': 'filter_point_source_id_range_changed', 'viewer': this});
+	}
+
+	setLengthUnit (value) {
+		switch (value) {
+			case 'm':
+				this.lengthUnit = LengthUnits.METER;
+				this.lengthUnitDisplay = LengthUnits.METER;
+				break;
+			case 'ft':
+				this.lengthUnit = LengthUnits.FEET;
+				this.lengthUnitDisplay = LengthUnits.FEET;
+				break;
+			case 'in':
+				this.lengthUnit = LengthUnits.INCH;
+				this.lengthUnitDisplay = LengthUnits.INCH;
+				break;
+		}
+
+		this.dispatchEvent({ 'type': 'length_unit_changed', 'viewer': this, value: value});
+	};
+
+	setLengthUnitAndDisplayUnit(lengthUnitValue, lengthUnitDisplayValue) {
+		switch (lengthUnitValue) {
+			case 'm':
+				this.lengthUnit = LengthUnits.METER;
+				break;
+			case 'ft':
+				this.lengthUnit = LengthUnits.FEET;
+				break;
+			case 'in':
+				this.lengthUnit = LengthUnits.INCH;
+				break;
+		}
+
+		switch (lengthUnitDisplayValue) {
+			case 'm':
+				this.lengthUnitDisplay = LengthUnits.METER;
+				break;
+			case 'ft':
+				this.lengthUnitDisplay = LengthUnits.FEET;
+				break;
+			case 'in':
+				this.lengthUnitDisplay = LengthUnits.INCH;
+				break;
+		}
+
+		this.dispatchEvent({ 'type': 'length_unit_changed', 'viewer': this, value: lengthUnitValue });
+	};
+
+	zoomTo(node, factor, animationDuration = 0){
+		for (let scissorIdx = 0; scissorIdx < this.scissorZones.length; scissorIdx++) {
+			let viewHolder = this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx].viewIdxInScene];
+			let view = viewHolder.view;
+
+			let camera = viewHolder.cameraP.clone();
+			camera.rotation.copy(viewHolder.cameraP.rotation);
+			camera.rotation.order = "ZXY";
+			camera.rotation.x = Math.PI / 2 + view.pitch;
+			camera.rotation.y = view.roll;
+			camera.rotation.z = view.yaw;
+			camera.updateMatrix();
+			camera.updateMatrixWorld();
+			camera.zoomTo(node, factor);
+
+			let bs;
+			if (node.boundingSphere) {
+				bs = node.boundingSphere;
+			} else if (node.geometry && node.geometry.boundingSphere) {
+				bs = node.geometry.boundingSphere;
+			} else {
+				bs = node.boundingBox.getBoundingSphere(new THREE.Sphere());
+			}
+			bs = bs.clone().applyMatrix4(node.matrixWorld); 
+
+			let startPosition = view.position.clone();
+			let endPosition = camera.position.clone();
+			let startTarget = view.getPivot();
+			let endTarget = bs.center;
+			let startRadius = view.radius;
+			let endRadius = endPosition.distanceTo(endTarget);
+
+			let easing = TWEEN.Easing.Quartic.Out;
+
+			{ // animate camera position
+				let pos = startPosition.clone();
+				let tween = new TWEEN.Tween(pos).to(endPosition, animationDuration);
+				tween.easing(easing);
+
+				tween.onUpdate(() => {
+					view.position.copy(pos);
+				});
+
+				tween.start();
+			}
+
+			{ // animate camera target
+				let target = startTarget.clone();
+				let tween = new TWEEN.Tween(target).to(endTarget, animationDuration);
+				tween.easing(easing);
+				tween.onUpdate(() => {
+					view.lookAt(target);
+				});
+				tween.onComplete(() => {
+					view.lookAt(target);
+					this.dispatchEvent({type: 'focusing_finished', target: this});
+				});
+
+				this.dispatchEvent({type: 'focusing_started', target: this});
+				tween.start();
+			}
+		}
+	};
+
+	moveToGpsTimeVicinity(time){
+		const result = Potree.Utils.findClosestGpsTime(time, viewer);
+
+		const box  = result.node.pointcloud.deepestNodeAt(result.position).getBoundingBox();
+		const diameter = box.min.distanceTo(box.max);
+
+		const camera = this.scene.getActiveCamera();
+		const offset = camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(diameter);
+		const newCamPos = result.position.clone().sub(offset);
+
+		this.scene.view.position.copy(newCamPos);
+		this.scene.view.lookAt(result.position);
+	}
+
+	showAbout () {
+		$(function () {
+			$('#about-panel').dialog();
+		});
+	};
+
+	getBoundingBox (pointclouds) {
+		return this.scene.getBoundingBox(pointclouds);
+	};
+
+	getGpsTimeExtent(){
+		const range = [Infinity, -Infinity];
+
+		for(const pointcloud of this.scene.pointclouds){
+			const attributes = pointcloud.pcoGeometry.pointAttributes.attributes;
+			const aGpsTime = attributes.find(a => a.name === "gps-time");
+
+			if(aGpsTime){
+				range[0] = Math.min(range[0], aGpsTime.range[0]);
+				range[1] = Math.max(range[1], aGpsTime.range[1]);
+			}
+		}
+
+		return range;
+	}
+
+	fitToScreen (box = null, factor = 1, animationDuration = 0) {
+		if (box) {
+		} else if (this.scene.pointclouds.length) {
+			box = this.getBoundingBox(this.scene.pointclouds);
+		} else {
+			box = new THREE.Box3();
+			box.min = new THREE.Vector3(40, -20, 0);
+			box.max = new THREE.Vector3(80, 90, 20);
+		}
+
+		let node = new THREE.Object3D();
+		node.boundingBox = box;
+
+		this.zoomTo(node, factor, animationDuration);
+		this.controls.stop();
+	};
+
+	toggleNavigationCube(val) {
+		this.navigationCube.visible = val;
+	}
+
+	setView(view, box = null) {
+		if(!view) return;
+
+		switch(view) {
+			case "South":
+				this.setFrontView(box);
+				break;
+			case "North":
+				this.setBackView(box);
+				break;
+			case "West":
+				this.setLeftView(box);
+				break;
+			case "East":
+				this.setRightView(box);
+				break;
+			case "U":
+				this.setTopView(box);
+				break;
+			case "D":
+				this.setBottomView(box);
+				break;
+		}
+	}
+	
+	setTopView(box){
+		this.getView(0).yaw = 0;
+		this.getView(0).pitch = -Math.PI / 2;
+
+		this.fitToScreen(box);
+	};
+	
+	setBottomView(box){
+		this.getView(0).yaw = -Math.PI;
+		this.getView(0).pitch = Math.PI / 2;
+		
+		this.fitToScreen(box);
+	};
+
+	setFrontView(box){
+		this.getView(0).yaw = 0;
+		this.getView(0).pitch = 0;
+
+		this.fitToScreen(box);
+	};
+	
+	setBackView(box){
+		this.getView(0).yaw = Math.PI;
+		this.getView(0).pitch = 0;
+		
+		this.fitToScreen(box);
+	};
+
+	setLeftView(box){
+		this.getView(0).yaw = -Math.PI / 2;
+		this.getView(0).pitch = 0;
+
+		this.fitToScreen(box);
+	};
+
+	setRightView (box) {
+		this.getView(0).yaw = Math.PI / 2;
+		this.getView(0).pitch = 0;
+
+		this.fitToScreen(box);
+	};
+
+	flipYZ () {
+		this.isFlipYZ = !this.isFlipYZ;
+
+		// TODO flipyz
+		console.log('TODO');
+	}
+	
+	setCameraMode(mode){
+		this.scene.cameraMode = mode;
+
+		for(let pointcloud of this.scene.pointclouds) {
+			pointcloud.material.useOrthographicCamera = mode == CameraMode.ORTHOGRAPHIC;
+		}
+	}
+
+	getProjection(){
+		const pointcloud = this.scene.pointclouds[0];
+
+		if(pointcloud){
+			return pointcloud.projection;
+		}else{
+			return null;
+		}
+	}
+
+	async loadProject(url){
+
+		const response = await fetch(url);
+	
+		const text = await response.text();
+		const json = JSON5.parse(text);
+		// const json = JSON.parse(text);
+
+		if(json.type === "Potree"){
+			Potree.loadProject(viewer, json);
+		}
+
+		//Potree.loadProject(this, url);
+	}
+
+	saveProject(){
+		return Potree.saveProject(this);
+	}
+	
+	loadSettingsFromURL(){
+		if(Utils.getParameterByName("pointSize")){
+			this.setPointSize(parseFloat(Utils.getParameterByName("pointSize")));
+		}
+		
+		if(Utils.getParameterByName("FOV")){
+			this.setFOV(parseFloat(Utils.getParameterByName("FOV")));
+		}
+		
+		if(Utils.getParameterByName("opacity")){
+			this.setOpacity(parseFloat(Utils.getParameterByName("opacity")));
+		}
+		
+		if(Utils.getParameterByName("edlEnabled")){
+			let enabled = Utils.getParameterByName("edlEnabled") === "true";
+			this.setEDLEnabled(enabled);
+		}
+
+		if (Utils.getParameterByName('edlRadius')) {
+			this.setEDLRadius(parseFloat(Utils.getParameterByName('edlRadius')));
+		}
+
+		if (Utils.getParameterByName('edlStrength')) {
+			this.setEDLStrength(parseFloat(Utils.getParameterByName('edlStrength')));
+		}
+
+		if (Utils.getParameterByName('pointBudget')) {
+			this.setPointBudget(parseFloat(Utils.getParameterByName('pointBudget')));
+		}
+
+		if (Utils.getParameterByName('showBoundingBox')) {
+			let enabled = Utils.getParameterByName('showBoundingBox') === 'true';
+			if (enabled) {
+				this.setShowBoundingBox(true);
+			} else {
+				this.setShowBoundingBox(false);
+			}
+		}
+
+		if (Utils.getParameterByName('material')) {
+			let material = Utils.getParameterByName('material');
+			this.setMaterial(material);
+		}
+
+		if (Utils.getParameterByName('pointSizing')) {
+			let sizing = Utils.getParameterByName('pointSizing');
+			this.setPointSizing(sizing);
+		}
+
+		if (Utils.getParameterByName('quality')) {
+			let quality = Utils.getParameterByName('quality');
+			this.setQuality(quality);
+		}
+
+		if (Utils.getParameterByName('position')) {
+			let value = Utils.getParameterByName('position');
+			value = value.replace('[', '').replace(']', '');
+			let tokens = value.split(';');
+			let x = parseFloat(tokens[0]);
+			let y = parseFloat(tokens[1]);
+			let z = parseFloat(tokens[2]);
+
+			this.scene.view.position.set(x, y, z);
+		}
+
+		if (Utils.getParameterByName('target')) {
+			let value = Utils.getParameterByName('target');
+			value = value.replace('[', '').replace(']', '');
+			let tokens = value.split(';');
+			let x = parseFloat(tokens[0]);
+			let y = parseFloat(tokens[1]);
+			let z = parseFloat(tokens[2]);
+
+			this.scene.view.lookAt(new THREE.Vector3(x, y, z));
+		}
+
+		if (Utils.getParameterByName('background')) {
+			let value = Utils.getParameterByName('background');
+			this.setBackground(value);
+		}
+
+		// if(Utils.getParameterByName("elevationRange")){
+		//	let value = Utils.getParameterByName("elevationRange");
+		//	value = value.replace("[", "").replace("]", "");
+		//	let tokens = value.split(";");
+		//	let x = parseFloat(tokens[0]);
+		//	let y = parseFloat(tokens[1]);
+		//
+		//	this.setElevationRange(x, y);
+		//	//this.scene.view.target.set(x, y, z);
+		// }
+	};
+
+	// ------------------------------------------------------------------------------------
+	// Viewer Internals
+	// ------------------------------------------------------------------------------------
+
+	createControls () {
+		{ // create FIRST PERSON CONTROLS
+			this.fpControls = new FirstPersonControls(this);
+			this.fpControls.enabled = false;
+			this.fpControls.addEventListener('start', this.disableAnnotations.bind(this));
+			this.fpControls.addEventListener('end', this.enableAnnotations.bind(this));
+		}
+
+		// { // create GEO CONTROLS
+		//	this.geoControls = new GeoControls(this.scene.camera, this.renderer.domElement);
+		//	this.geoControls.enabled = false;
+		//	this.geoControls.addEventListener("start", this.disableAnnotations.bind(this));
+		//	this.geoControls.addEventListener("end", this.enableAnnotations.bind(this));
+		//	this.geoControls.addEventListener("move_speed_changed", (event) => {
+		//		this.setMoveSpeed(this.geoControls.moveSpeed);
+		//	});
+		// }
+
+		{ // create ORBIT CONTROLS
+			this.orbitControls = new OrbitControls(this, [0], true);
+			this.orbitControls.enabled = false;
+			this.orbitControls.addEventListener('start', this.disableAnnotations.bind(this));
+			this.orbitControls.addEventListener('end', this.enableAnnotations.bind(this));
+		}
+
+		{ // create ORBIT CONTROLS 2
+			this.orbitControls2 = new OrbitControls(this, [1], false);
+			this.orbitControls2.enabled = false;
+			this.orbitControls2.addEventListener('start', this.disableAnnotations.bind(this));
+			this.orbitControls2.addEventListener('end', this.enableAnnotations.bind(this));
+		}
+
+		{ // create EARTH CONTROLS
+			this.earthControls = new EarthControls(this);
+			this.earthControls.enabled = false;
+			this.earthControls.addEventListener('start', this.disableAnnotations.bind(this));
+			this.earthControls.addEventListener('end', this.enableAnnotations.bind(this));
+		}
+
+		{ // create DEVICE ORIENTATION CONTROLS
+			this.deviceControls = new DeviceOrientationControls(this);
+			this.deviceControls.enabled = false;
+			this.deviceControls.addEventListener('start', this.disableAnnotations.bind(this));
+			this.deviceControls.addEventListener('end', this.enableAnnotations.bind(this));
+		}
+
+		{ // create VR CONTROLS
+			this.vrControls = new VRControls(this);
+			this.vrControls.enabled = false;
+			this.vrControls.addEventListener('start', this.disableAnnotations.bind(this));
+			this.vrControls.addEventListener('end', this.enableAnnotations.bind(this));
+		}
+
+
+	};
+
+	toggleSidebar () {
+		let renderArea = $('#potree_render_area');
+		let isVisible = renderArea.css('left') !== '0px';
+
+		if (isVisible) {
+			renderArea.css('left', '0px');
+		} else {
+			renderArea.css('left', '300px');
+		}
+	};
+
+	toggleMap () {
+		// let map = $('#potree_map');
+		// map.toggle(100);
+
+		if (this.mapView) {
+			this.mapView.toggle();
+		}
+	};
+
+	onGUILoaded(callback){
+		if(this.guiLoaded){
+			callback();
+		}else{
+			this.guiLoadTasks.push(callback);
+		}
+	}
+
+	promiseGuiLoaded(){
+		return new Promise( resolve => {
+
+			if(this.guiLoaded){
+				resolve();
+			}else{
+				this.guiLoadTasks.push(resolve);
+			}
+		
+		});
+	}
+
+	loadGUI(callback){
+
+		if(callback){
+			this.onGUILoaded(callback);
+		}
+
+		let viewer = this;
+		let sidebarContainer = $('#potree_sidebar_container');
+		sidebarContainer.load(new URL(Potree.scriptPath + '/sidebar.html').href, () => {
+			sidebarContainer.css('width', '300px');
+			sidebarContainer.css('height', '100%');
+
+			let imgMenuToggle = document.createElement('img');
+			imgMenuToggle.src = new URL(Potree.resourcePath + '/icons/menu_button.svg').href;
+			imgMenuToggle.onclick = this.toggleSidebar;
+			imgMenuToggle.classList.add('potree_menu_toggle');
+
+			let imgMapToggle = document.createElement('img');
+			imgMapToggle.src = new URL(Potree.resourcePath + '/icons/map_icon.png').href;
+			imgMapToggle.style.display = 'none';
+			imgMapToggle.onclick = e => { this.toggleMap(); };
+			imgMapToggle.id = 'potree_map_toggle';
+
+			
+
+			let elButtons = $("#potree_quick_buttons").get(0);
+
+			elButtons.append(imgMenuToggle);
+			elButtons.append(imgMapToggle);
+
+
+			VRButton.createButton(this.renderer).then(vrButton => {
+
+				if(vrButton == null){
+					console.log("VR not supported or active.");
+
+					return;
+				}
+
+				this.renderer.xr.enabled = true;
+
+				let element = vrButton.element;
+
+				element.style.position = "";
+				element.style.bottom = "";
+				element.style.left = "";
+				element.style.margin = "4px";
+				element.style.fontSize = "100%";
+				element.style.width = "2.5em";
+				element.style.height = "2.5em";
+				element.style.padding = "0";
+				element.style.textShadow = "black 2px 2px 2px";
+				element.style.display = "block";
+
+				elButtons.append(element);
+
+				vrButton.onStart(() => {
+					this.dispatchEvent({type: "vr_start"});
+				});
+
+				vrButton.onEnd(() => {
+					this.dispatchEvent({type: "vr_end"});
+				});
+			});
+
+			this.mapView = new MapView(this);
+			this.mapView.init();
+
+			i18n.init({
+				lng: 'en',
+				resGetPath: Potree.resourcePath + '/lang/__lng__/__ns__.json',
+				preload: ['en', 'fr', 'de', 'jp', 'se', 'es', 'zh', 'it','ca'],
+				getAsync: true,
+				debug: false
+			}, function (t) {
+				// Start translation once everything is loaded
+				$('body').i18n();
+			});
+
+			$(() => {
+				//initSidebar(this);
+				let sidebar = new Sidebar(this);
+				sidebar.init();
+
+				this.sidebar = sidebar;
+
+				//if (callback) {
+				//	$(callback);
+				//}
+
+				let elProfile = $('<div>').load(new URL(Potree.scriptPath + '/profile.html').href, () => {
+					$(document.body).append(elProfile.children());
+					this.profileWindow = new ProfileWindow(this);
+					this.profileWindowController = new ProfileWindowController(this);
+
+					$('#profile_window').draggable({
+						handle: $('#profile_titlebar'),
+						containment: $(document.body)
+					});
+					$('#profile_window').resizable({
+						containment: $(document.body),
+						handles: 'n, e, s, w'
+					});
+
+					$(() => {
+						this.guiLoaded = true;
+						for(let task of this.guiLoadTasks){
+							task();
+						}
+
+					});
+				});
+
+				
+
+			});
+
+			
+		});
+
+		return this.promiseGuiLoaded();
+	}
+
+	setLanguage (lang) {
+		i18n.setLng(lang);
+		$('body').i18n();
+	}
+
+	setServer (server) {
+		this.server = server;
+	}
+
+	initDragAndDrop(){
+		function allowDrag(e) {
+			e.dataTransfer.dropEffect = 'copy';
+			e.preventDefault();
+		}
+
+		let dropHandler = async (event) => {
+			console.log(event);
+			event.preventDefault();
+
+			for(const item of event.dataTransfer.items){
+				console.log(item);
+
+				if(item.kind !== "file"){
+					continue;
+				}
+
+				const file = item.getAsFile();
+
+				const isJson5 = file.name.toLowerCase().endsWith(".json5");
+				const isGeoPackage = file.name.toLowerCase().endsWith(".gpkg");
+
+				if(isJson5){
+					try{
+
+						const text = await file.text();
+						const json = JSON5.parse(text);
+
+						if(json.type === "Potree"){
+							Potree.loadProject(viewer, json);
+						}
+					}catch(e){
+						console.error("failed to parse the dropped file as JSON");
+						console.error(e);
+					}
+				}else if(isGeoPackage){
+					const hasPointcloud = viewer.scene.pointclouds.length > 0;
+
+					if(!hasPointcloud){
+						let msg = "At least one point cloud is needed that specifies the ";
+						msg += "coordinate reference system before loading vector data.";
+						console.error(msg);
+					}else{
+
+						proj4.defs("WGS84", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+						proj4.defs("pointcloud", this.getProjection());
+						let transform = proj4("WGS84", "pointcloud");
+
+						const buffer = await file.arrayBuffer();
+
+						const params = {
+							transform: transform,
+							source: file.name,
+						};
+						
+						const geo = await Potree.GeoPackageLoader.loadBuffer(buffer, params);
+						viewer.scene.addGeopackage(geo);
+					}
+				}
+				
+			}
+		};
+
+
+		$("body")[0].addEventListener("dragenter", allowDrag);
+		$("body")[0].addEventListener("dragover", allowDrag);
+		$("body")[0].addEventListener("drop", dropHandler);
+	}
+
+	initThree () {
+
+		console.log(`initializing three.js ${THREE.REVISION}`);
+
+		let width = this.renderArea.clientWidth;
+		let height = this.renderArea.clientHeight;
+
+		let contextAttributes = {
+			alpha: true,
+			depth: true,
+			stencil: false,
+			antialias: false,
+			//premultipliedAlpha: _premultipliedAlpha,
+			preserveDrawingBuffer: true,
+			powerPreference: "high-performance",
+		};
+
+		// let contextAttributes = {
+		// 	alpha: false,
+		// 	preserveDrawingBuffer: true,
+		// };
+
+		// let contextAttributes = {
+		// 	alpha: false,
+		// 	preserveDrawingBuffer: true,
+		// };
+
+		let canvas = document.createElement("canvas");
+
+		let context = canvas.getContext('webgl', contextAttributes );
+
+		this.renderer = new THREE.WebGLRenderer({
+			alpha: true, 
+			premultipliedAlpha: false,
+			canvas: canvas,
+			context: context});
+		this.renderer.sortObjects = false;
+		this.renderer.setSize(width, height);
+		this.renderer.autoClear = false;
+		this.renderer.setClearColor(0xffffff);
+		this.renderArea.appendChild(this.renderer.domElement);
+		this.renderer.domElement.tabIndex = '2222';
+		this.renderer.domElement.style.position = 'absolute';
+		this.renderer.domElement.addEventListener('mousedown', () => {
+			this.renderer.domElement.focus();
+		});
+		//this.renderer.domElement.focus();
+
+		// NOTE: If extension errors occur, pass the string into this.renderer.extensions.get(x) before enabling
+		// enable frag_depth extension for the interpolation shader, if available
+		let gl = this.renderer.getContext();
+		gl.getExtension('EXT_frag_depth');
+		gl.getExtension('WEBGL_depth_texture');
+		gl.getExtension('WEBGL_color_buffer_float'); 	// Enable explicitly for more portability, EXT_color_buffer_float is the proper name in WebGL 2
+		
+		if(gl.createVertexArray == null){
+			let extVAO = gl.getExtension('OES_vertex_array_object');
+
+			if(!extVAO){
+				throw new Error("OES_vertex_array_object extension not supported");
+			}
+
+			gl.createVertexArray = extVAO.createVertexArrayOES.bind(extVAO);
+			gl.bindVertexArray = extVAO.bindVertexArrayOES.bind(extVAO);
+		}
+		
+	}
+
+	updateAnnotations () {
+
+		if(!this.visibleAnnotations){
+			this.visibleAnnotations = new Set();
+		}
+
+		this.scene.annotations.updateBounds();
+		this.scene.cameraP.updateMatrixWorld();
+		this.scene.cameraO.updateMatrixWorld();
+		
+		let distances = [];
+
+		let renderAreaSize = this.renderer.getSize(new THREE.Vector2());
+
+		let viewer = this;
+
+		let visibleNow = [];
+		this.scene.annotations.traverse(annotation => {
+
+			if (annotation === this.scene.annotations) {
+				return true;
+			}
+
+			if (!annotation.visible) {
+				return false;
+			}
+
+			annotation.scene = this.scene;
+
+			let element = annotation.domElement;
+
+			let position = annotation.position.clone();
+			position.add(annotation.offset);
+			if (!position) {
+				position = annotation.boundingBox.getCenter(new THREE.Vector3());
+			}
+
+			let distance = viewer.scene.cameraP.position.distanceTo(position);
+			let radius = annotation.boundingBox.getBoundingSphere(new THREE.Sphere()).radius;
+
+			let screenPos = new THREE.Vector3();
+			let screenSize = 0;
+
+			{
+				// SCREEN POS
+				screenPos.copy(position).project(this.scene.getActiveCamera());
+				screenPos.x = renderAreaSize.x * (screenPos.x + 1) / 2;
+				screenPos.y = renderAreaSize.y * (1 - (screenPos.y + 1) / 2);
+
+
+				// SCREEN SIZE
+				if(viewer.scene.cameraMode == CameraMode.PERSPECTIVE) {
+					let fov = Math.PI * viewer.scene.cameraP.fov / 180;
+					let slope = Math.tan(fov / 2.0);
+					let projFactor =  0.5 * renderAreaSize.y / (slope * distance);
+					screenSize = radius * projFactor;
+				} else {
+					screenSize = Utils.projectedRadiusOrtho(radius, viewer.scene.cameraO.projectionMatrix, renderAreaSize.x, renderAreaSize.y);
+				}
+			}
+
+			element.css("left", screenPos.x + "px");
+			element.css("top", screenPos.y + "px");
+			//element.css("display", "block");
+
+			let zIndex = 10000000 - distance * (10000000 / this.scene.cameraP.far);
+			if(annotation.descriptionVisible){
+				zIndex += 10000000;
+			}
+			element.css("z-index", parseInt(zIndex));
+
+			if(annotation.children.length > 0){
+				let expand = screenSize > annotation.collapseThreshold || annotation.boundingBox.containsPoint(this.scene.getActiveCamera().position);
+				annotation.expand = expand;
+
+				if (!expand) {
+					//annotation.display = (screenPos.z >= -1 && screenPos.z <= 1);
+					let inFrustum = (screenPos.z >= -1 && screenPos.z <= 1);
+					if(inFrustum){
+						visibleNow.push(annotation);
+					}
+				}
+
+				return expand;
+			} else {
+				//annotation.display = (screenPos.z >= -1 && screenPos.z <= 1);
+				let inFrustum = (screenPos.z >= -1 && screenPos.z <= 1);
+				if(inFrustum){
+					visibleNow.push(annotation);
+				}
+			}
+			
+		});
+
+		let notVisibleAnymore = new Set(this.visibleAnnotations);
+		for(let annotation of visibleNow){
+			annotation.display = true;
+			
+			notVisibleAnymore.delete(annotation);
+		}
+		this.visibleAnnotations = visibleNow;
+
+		for(let annotation of notVisibleAnymore){
+			annotation.display = false;
+		}
+
+	}
+
+	updateMaterialDefaults(pointcloud){
+		// PROBLEM STATEMENT:
+		// * [min, max] of intensity, source id, etc. are computed as point clouds are loaded
+		// * the point cloud material won't know the range it should use until some data is loaded
+		// * users can modify the range at runtime, but sensible default ranges should be 
+		//   applied even if no GUI is present
+		// * display ranges shouldn't suddenly change even if the actual range changes over time.
+		//   e.g. the root node has intensity range [1, 478]. One of the descendants increases range to 
+		//   [0, 2047]. We should not automatically change to the new range because that would result
+		//   in sudden and drastic changes of brightness. We should adjust the min/max of the sidebar slider.
+
+		const material = pointcloud.material;
+
+		const attIntensity = pointcloud.getAttribute("intensity");
+		
+		if(attIntensity != null && material.intensityRange[0] === Infinity){
+			material.intensityRange = [...attIntensity.range];
+		}
+
+		// const attIntensity = pointcloud.getAttribute("intensity");
+		// if(attIntensity && material.intensityRange[0] === Infinity){
+		// 	material.intensityRange = [...attIntensity.range];
+		// }
+
+		// let attributes = pointcloud.getAttributes();
+
+		// for(let attribute of attributes.attributes){
+		// 	if(attribute.range){
+		// 		let range = [...attribute.range];
+		// 		material.computedRange.set(attribute.name, range);
+		// 		//material.setRange(attribute.name, range);
+		// 	}
+		// }
+
+
+	}
+
+	update(delta, timestamp){
+
+		if(Potree.measureTimings) performance.mark("update-start");
+
+		this.dispatchEvent({
+			type: 'update_start',
+			delta: delta,
+			timestamp: timestamp});
+
+		for ( let scissorIdx = 0; scissorIdx < this.scissorZones.length; scissorIdx++ ) {
+			const scene = this.scissorZones[scissorIdx].scene;
+			const camera = this.getCamera(scissorIdx);
+			const visiblePointClouds = scene.pointclouds.filter(pc => pc.visible)
+			
+			Potree.pointLoadLimit = Potree.pointBudget * 2;
+
+			const lTarget = camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000));
+			this.scissorZones[scissorIdx].scene.directionalLight.position.copy(camera.position);
+			this.scissorZones[scissorIdx].scene.directionalLight.lookAt(lTarget);
+
+
+			for (let pointcloud of visiblePointClouds) {
+
+				pointcloud.showBoundingBox = this.showBoundingBox;
+				pointcloud.generateDEM = this.generateDEM;
+				pointcloud.minimumNodePixelSize = this.minNodeSize;
+
+				let material = pointcloud.material;
+
+				material.uniforms.uFilterReturnNumberRange.value = this.filterReturnNumberRange;
+				material.uniforms.uFilterNumberOfReturnsRange.value = this.filterNumberOfReturnsRange;
+				material.uniforms.uFilterGPSTimeClipRange.value = this.filterGPSTimeRange;
+				material.uniforms.uFilterPointSourceIDClipRange.value = this.filterPointSourceIDRange;
+
+				material.classification = this.classifications;
+				material.recomputeClassification();
+
+				this.updateMaterialDefaults(pointcloud);
+			}
+
+			{
+				if(this.showBoundingBox){
+					let bbRoot = this.scissorZones[scissorIdx].scene.scene.getObjectByName("potree_bounding_box_root");
+					if(!bbRoot){
+						let node = new THREE.Object3D();
+						node.name = "potree_bounding_box_root";
+						this.scissorZones[scissorIdx].scene.scene.add(node);
+						bbRoot = node;
+					}
+
+					let visibleBoxes = [];
+					for(let pointcloud of this.scissorZones[scissorIdx].scene.pointclouds){
+						for(let node of pointcloud.visibleNodes.filter(vn => vn.boundingBoxNode !== undefined)){
+							let box = node.boundingBoxNode;
+							visibleBoxes.push(box);
+						}
+					}
+
+					bbRoot.children = visibleBoxes;
+				}
+			}
+
+			if (!this.freeze) {
+				let result = Potree.updatePointClouds(scene.pointclouds, camera, this.renderer);
+
+
+				// DEBUG - ONLY DISPLAY NODES THAT INTERSECT MOUSE
+				//if(false){ 
+
+				//	let renderer = viewer.renderer;
+				//	let mouse = viewer.inputHandler.mouse;
+
+				//	let nmouse = {
+				//		x: (mouse.x / renderer.domElement.clientWidth) * 2 - 1,
+				//		y: -(mouse.y / renderer.domElement.clientHeight) * 2 + 1
+				//	};
+
+				//	let pickParams = {};
+
+				//	//if(params.pickClipped){
+				//	//	pickParams.pickClipped = params.pickClipped;
+				//	//}
+
+				//	pickParams.x = mouse.x;
+				//	pickParams.y = renderer.domElement.clientHeight - mouse.y;
+
+				//	let raycaster = new THREE.Raycaster();
+				//	raycaster.setFromCamera(nmouse, camera);
+				//	let ray = raycaster.ray;
+
+				//	for(let pointcloud of scene.pointclouds){
+				//		let nodes = pointcloud.nodesOnRay(pointcloud.visibleNodes, ray);
+				//		pointcloud.visibleNodes = nodes;
+
+				//	}
+				//}
+
+				// const tStart = performance.now();
+				// const worldPos = new THREE.Vector3();
+				// const camPos = viewer.scene.getActiveCamera().getWorldPosition(new THREE.Vector3());
+				// let lowestDistance = Infinity;
+				// let numNodes = 0;
+
+				// viewer.scene.scene.traverse(node => {
+				// 	node.getWorldPosition(worldPos);
+
+				// 	const distance = worldPos.distanceTo(camPos);
+
+				// 	lowestDistance = Math.min(lowestDistance, distance);
+
+				// 	numNodes++;
+
+				// 	if(Number.isNaN(distance)){
+				// 		console.error(":(");
+				// 	}
+				// });
+				// const duration = (performance.now() - tStart).toFixed(2);
+
+				// Potree.debug.computeNearDuration = duration;
+				// Potree.debug.numNodes = numNodes;
+
+				//console.log(lowestDistance.toString(2), duration);
+
+				const tStart = performance.now();
+				const campos = camera.position;
+				let closestImage = Infinity;
+				for(const images of this.scissorZones[scissorIdx].scene.orientedImages){
+					for(const image of images.images){
+						const distance = image.mesh.position.distanceTo(campos);
+
+						closestImage = Math.min(closestImage, distance);
+					}
+				}
+				const tEnd = performance.now();
+
+				if(result.lowestSpacing !== Infinity){
+					let near = result.lowestSpacing * 10.0;
+					let far = -this.getBoundingBox().applyMatrix4(camera.matrixWorldInverse).min.z;
+
+					far = Math.max(far * 1.5, 10000);
+					near = Math.min(100.0, Math.max(0.01, near));
+					near = Math.min(near, closestImage);
+					far = Math.max(far, near + 10000);
+
+					if(near === Infinity){
+						near = 0.1;
+					}
+					
+					camera.near = near;
+					camera.far = far;
+				}else{
+					// don't change near and far in this case
+				}
+
+				if(this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx].viewIdxInScene].cameraMode == CameraMode.ORTHOGRAPHIC) {
+					camera.near = -camera.far;
+				}
+			} 
+			
+			let cameraP = this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx].viewIdxInScene].cameraP;
+			let cameraO = this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx].viewIdxInScene].cameraO;
+			cameraP.fov = this.fov;
+			
+			let controls = this.getControls(scissorIdx);
+			if (controls === this.deviceControls) {
+				this.scissorZones[idx].controls.setScene(scene);
+				this.scissorZones[idx].controls.update(delta);
+
+				cameraP.position.copy(this.getView(scissorIdx).position);
+				cameraO.position.copy(this.getView(scissorIdx).position);
+			} else if (controls !== null) {
+				controls.setScene(scene);
+				controls.update(delta);
+
+				// "YZX" looks better than "ZXY" now that Y rotation can be nonzero.
+				if(typeof debugDisabled === "undefined" ){
+					cameraP.position.copy(this.getView(scissorIdx).position);
+					cameraP.rotation.order = "YZX";
+					cameraP.rotation.x = Math.PI / 2 + this.getView(scissorIdx).pitch;
+					cameraP.rotation.y = this.getView(scissorIdx).roll;
+					cameraP.rotation.z = this.getView(scissorIdx).yaw;
+				}
+
+				cameraO.position.copy(this.getView(scissorIdx).position);
+				cameraO.rotation.order = "YZX";
+				cameraO.rotation.x = Math.PI / 2 + this.getView(scissorIdx).pitch;
+				cameraO.rotation.y = this.getView(scissorIdx).roll;
+				cameraO.rotation.z = this.getView(scissorIdx).yaw;
+			}
+			
+			camera.updateMatrix();
+			camera.updateMatrixWorld();
+			camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+
+			{
+				if(this._previousCamera === undefined){
+					this._previousCamera = this.getCamera(scissorIdx).clone();
+					this._previousCamera.rotation.copy(this.getCamera(scissorIdx).rotation);
+				}
+
+				if(!this._previousCamera.matrixWorld.equals(camera.matrixWorld)){
+					this.dispatchEvent({
+						type: "camera_changed",
+						previous: this._previousCamera,
+						camera: camera
+					});
+				}else if(!this._previousCamera.projectionMatrix.equals(camera.projectionMatrix)){
+					this.dispatchEvent({
+						type: "camera_changed",
+						previous: this._previousCamera,
+						camera: camera
+					});
+				}
+
+				this._previousCamera = this.getCamera(scissorIdx).clone();
+				this._previousCamera.rotation.copy(this.getCamera(scissorIdx).rotation);
+
+			}
+
+			{ // update clip boxes
+				let boxes = [];
+				
+				// volumes with clipping enabled
+				//boxes.push(...this.scissorZones[scissorIdx].scene.volumes.filter(v => (v.clip)));
+				boxes.push(...this.scissorZones[scissorIdx].scene.volumes.filter(v => (v.clip && v instanceof BoxVolume)));
+
+				// profile segments
+				for(let profile of this.scissorZones[scissorIdx].scene.profiles){
+					boxes.push(...profile.boxes);
+				}
+				
+				// Needed for .getInverse(), pre-empt a determinant of 0, see #815 / #816
+				let degenerate = (box) => box.matrixWorld.determinant() !== 0;
+				
+				let clipBoxes = boxes.filter(degenerate).map( box => {
+					box.updateMatrixWorld();
+					
+					let boxInverse = box.matrixWorld.clone().invert();
+					let boxPosition = box.getWorldPosition(new THREE.Vector3());
+
+					return {box: box, inverse: boxInverse, position: boxPosition};
+				});
+
+				let clipPolygons = this.scissorZones[scissorIdx].scene.polygonClipVolumes.filter(vol => vol.initialized);
+				
+				// set clip volumes in material
+				for(let pointcloud of visiblePointClouds){
+					pointcloud.material.setClipBoxes(clipBoxes);
+					pointcloud.material.setClipPolygons(clipPolygons, this.clippingTool.maxPolygonVertices);
+					pointcloud.material.clipTask = this.clipTask;
+					pointcloud.material.clipMethod = this.clipMethod;
+				}
+			}
+
+			{
+				for(let pointcloud of visiblePointClouds){
+					pointcloud.material.elevationGradientRepeat = this.elevationGradientRepeat;
+				}
+			}
+			
+			{ // update navigation cube, only for the first scissor zone in the list
+				if (scissorIdx == 0) this.navigationCube.update(camera.rotation);
+			}
+		}
+
+		this.updateAnnotations();
+		
+		if(this.mapView){
+			this.mapView.update(delta);
+			if(this.mapView.sceneProjection){
+				$( "#potree_map_toggle" ).css("display", "block");
+				
+			}
+		}
+
+		TWEEN.update(timestamp);
+
+		this.dispatchEvent({
+			type: 'update',
+			delta: delta,
+			timestamp: timestamp});
+			
+		if(Potree.measureTimings) {
+			performance.mark("update-end");
+			performance.measure("update", "update-start", "update-end");
+		}
+	}
+
+	getPRenderer(){
+		if(this.useHQ){
+			if (!this.hqRenderer) {
+				this.hqRenderer = new HQSplatRenderer(this);
+			}
+			this.hqRenderer.useEDL = this.useEDL;
+
+			return this.hqRenderer;
+		}else{
+			if (this.useEDL && Features.SHADER_EDL.isSupported()) {
+				if (!this.edlRenderer) {
+					this.edlRenderer = new EDLRenderer(this);
+				}
+
+				return this.edlRenderer;
+			} else {
+				if (!this.potreeRenderer) {
+					this.potreeRenderer = new PotreeRenderer(this);
+				}
+
+				return this.potreeRenderer;
+			}
+		}
+	}
+
+	renderVR(){
+
+		let renderer = this.renderer;
+
+		renderer.setClearColor(0x550000, 0);
+		renderer.clear();
+
+		let xr = renderer.xr;
+		let dbg = new THREE.PerspectiveCamera();
+		let xrCameras = xr.getCamera(dbg);
+
+		if(xrCameras.cameras.length !== 2){
+			return;
+		}
+
+		let makeCam = this.vrControls.getCamera.bind(this.vrControls);
+
+		{ // clear framebuffer
+			if(viewer.background === "skybox"){
+				renderer.setClearColor(0xff0000, 1);
+			}else if(viewer.background === "gradient"){
+				renderer.setClearColor(0x112233, 1);
+			}else if(viewer.background === "black"){
+				renderer.setClearColor(0x000000, 1);
+			}else if(viewer.background === "white"){
+				renderer.setClearColor(0xFFFFFF, 1);
+			}else{
+				renderer.setClearColor(0x000000, 0);
+			}
+
+			renderer.clear();
+		}
+
+		// render background
+		if(this.background === "skybox"){
+			let {skybox} = this;
+
+			let cam = makeCam();
+			skybox.camera.rotation.copy(cam.rotation);
+			skybox.camera.fov = cam.fov;
+			skybox.camera.aspect = cam.aspect;
+			
+			// let dbg = new THREE.Object3D();
+			let dbg = skybox.parent;
+			// dbg.up.set(0, 0, 1);
+			dbg.rotation.x = Math.PI / 2;
+
+			// skybox.camera.parent = dbg;
+			// dbg.children.push(skybox.camera);
+
+			dbg.updateMatrix();
+			dbg.updateMatrixWorld();
+
+			skybox.camera.updateMatrix();
+			skybox.camera.updateMatrixWorld();
+			skybox.camera.updateProjectionMatrix();
+
+			renderer.render(skybox.scene, skybox.camera);
+			// renderer.render(skybox.scene, cam);
+		}else if(this.background === "gradient"){
+			// renderer.render(this.scene.sceneBG, this.scene.cameraBG);
+		}
+
+		this.renderer.xr.getSession().updateRenderState({
+			depthNear: 0.1,
+			depthFar: 10000
+		});
+		
+		let cam = null;
+		let view = null;
+
+		{ // render world scene
+			cam = makeCam();
+			cam.position.z -= 0.8 * cam.scale.x;
+			cam.parent = null;
+			// cam.near = 0.05;
+			cam.near = viewer.scene.getActiveCamera().near;
+			cam.far = viewer.scene.getActiveCamera().far;
+			cam.updateMatrix();
+			cam.updateMatrixWorld();
+
+			this.scene.scene.updateMatrix();
+			this.scene.scene.updateMatrixWorld();
+			this.scene.scene.matrixAutoUpdate = false;
+
+			let camWorld = cam.matrixWorld.clone();
+			view = camWorld.clone().invert();
+			this.scene.scene.matrix.copy(view);
+			this.scene.scene.matrixWorld.copy(view);
+
+			cam.matrix.identity();
+			cam.matrixWorld.identity();
+			cam.matrixWorldInverse.identity();
+
+			renderer.render(this.scene.scene, cam);
+
+			this.scene.scene.matrixWorld.identity();
+
+		}
+		
+		for(let pointcloud of this.scene.pointclouds){
+
+			let viewport = xrCameras.cameras[0].viewport;
+
+			pointcloud.material.useEDL = false;
+			pointcloud.screenHeight = viewport.height;
+			pointcloud.screenWidth = viewport.width;
+
+			// automatically switch to paraboloids because they cause far less flickering in VR, 
+			// when point sizes are larger than around 2 pixels
+			// if(Features.SHADER_INTERPOLATION.isSupported()){
+			// 	pointcloud.material.shape = Potree.PointShape.PARABOLOID;
+			// }
+		}
+		
+		// render point clouds
+		for(let xrCamera of xrCameras.cameras){
+
+			let v = xrCamera.viewport;
+			renderer.setViewport(v.x, v.y, v.width, v.height);
+
+			// xrCamera.fov = 90;
+
+			{ // estimate VR fov
+				let proj = xrCamera.projectionMatrix;
+				let inv = proj.clone().invert();
+
+				let p1 = new THREE.Vector4(0, 1, -1, 1).applyMatrix4(inv);
+				let rad = p1.y
+				let fov = 180 * (rad / Math.PI);
+
+				xrCamera.fov = fov;
+			}
+
+			for(let pointcloud of this.scene.pointclouds){
+				const {material} = pointcloud;
+				material.useEDL = false;
+			}
+
+			let vrWorld = view.clone().invert();
+			vrWorld.multiply(xrCamera.matrixWorld);
+			let vrView = vrWorld.clone().invert();
+
+			this.pRenderer.render(this.scene.scenePointCloud, xrCamera, null, {
+				viewOverride: vrView,
+			});
+
+		}
+
+		{ // render VR scene
+			let cam = makeCam();
+			cam.parent = null;
+
+			renderer.render(this.sceneVR, cam);
+		}
+
+		renderer.resetState();
+
+	}
+
+	renderDefault(){
+		let pRenderer = this.getPRenderer();
+
+		const width = this.scaleFactor * this.renderArea.clientWidth;
+		const height = this.scaleFactor * this.renderArea.clientHeight;
+
+		{ // resize
+			this.renderer.setSize(width, height);
+			const pixelRatio = this.renderer.getPixelRatio();
+
+			for (let scissorZoneIdx = 0; scissorZoneIdx < this.scissorZones.length; scissorZoneIdx++) {
+				const viewport = this.getViewport(scissorZoneIdx);
+				const aspect = viewport.width / viewport.height;
+
+				const scene = this.scissorZones[scissorZoneIdx].scene;
+				let cameraHolder = scene.views[this.scissorZones[scissorZoneIdx].viewIdxInScene];
+
+				scene.cameraP.aspect = aspect;
+				scene.cameraP.updateProjectionMatrix();
+
+				let frustumScale = this.getView(scissorZoneIdx).radius;
+				cameraHolder.cameraO.left = -frustumScale;
+				cameraHolder.cameraO.right = frustumScale;
+				cameraHolder.cameraO.top = frustumScale * 1 / aspect;
+				cameraHolder.cameraO.bottom = -frustumScale * 1 / aspect;
+				cameraHolder.cameraO.updateProjectionMatrix();
+
+				scene.cameraScreenSpace.top = 1/aspect;
+				scene.cameraScreenSpace.bottom = -1/aspect;
+				scene.cameraScreenSpace.updateProjectionMatrix();
+			}
+		}
+
+		// Clear full canvas
+		this.renderer.setScissor(0,0,width,height);
+		this.renderer.clear();
+
+		for (let scissorZoneIdx = 0; scissorZoneIdx < this.scissorZones.length; scissorZoneIdx++) {
+			const zone = this.scissorZones[scissorZoneIdx];
+			if(!zone.visible)
+				continue;
+			if(zone.scissor.top < zone.scissor.bottom || zone.scissor.right < zone.scissor.left)
+				continue;
+			this.renderer.setScissor(this.getScissor(scissorZoneIdx));
+			this.renderer.setViewport(this.getViewport(scissorZoneIdx));
+			this.renderer.setScissorTest(true);
+			// Code for making two mini canvases render the same scene
+			// but one of them toggles the visible and _visible properties of some items.
+			/*
 			let objectsToRestoreVisible = [];
 			let objectsToRestore_Visible = [];
 			if(scissorZoneIdx == 1) {
@@ -2511,219 +2343,218 @@ export class Viewer extends EventDispatcher {
 			}
 			*/
 
-      pRenderer.render(this.renderer, scissorZoneIdx);
-      /*
+			pRenderer.render(this.renderer, scissorZoneIdx);
+			/*
 			for(let i = 0; i < objectsToRestoreVisible.length; i++)
 				objectsToRestoreVisible[i].visible = true;
 			for(let i = 0; i < objectsToRestore_Visible.length; i++)
 				objectsToRestore_Visible[i]._visible = true;
 			*/
-      this.renderer.render(this.overlay, this.overlayCamera);
-    }
-  }
+			this.renderer.render(this.overlay, this.overlayCamera);
+		}
+	}
+	
+	render(){
+		if(Potree.measureTimings) performance.mark("render-start");
 
-  render() {
-    if (Potree.measureTimings) performance.mark("render-start");
+		try{
 
-    try {
-      const vrActive = this.renderer.xr.isPresenting;
+			const vrActive = this.renderer.xr.isPresenting;
 
-      if (vrActive) {
-        this.renderVR();
-      } else {
-        this.renderDefault();
-      }
-    } catch (e) {
-      this.onCrash(e);
-    }
+			if(vrActive){
+				this.renderVR();
+			}else{
+				this.renderDefault();
+			}
 
-    if (Potree.measureTimings) {
-      performance.mark("render-end");
-      performance.measure("render", "render-start", "render-end");
-    }
-  }
+		}catch(e){
+			this.onCrash(e);
+		}
+		
+		if(Potree.measureTimings){
+			performance.mark("render-end");
+			performance.measure("render", "render-start", "render-end");
+		}
+	}
 
-  resolveTimings(timestamp) {
-    if (Potree.measureTimings) {
-      if (!this.toggle) {
-        this.toggle = timestamp;
-      }
-      let duration = timestamp - this.toggle;
-      if (duration > 1000.0) {
-        let measures = performance.getEntriesByType("measure");
+	resolveTimings(timestamp){
+		if(Potree.measureTimings){
+			if(!this.toggle){
+				this.toggle = timestamp;
+			}
+			let duration = timestamp - this.toggle;
+			if(duration > 1000.0){
+			
+				let measures = performance.getEntriesByType("measure");
+				
+				let names = new Set();
+				for(let measure of measures){
+					names.add(measure.name);
+				}
+				
+				let groups = new Map();
+				for(let name of names){
+					groups.set(name, {
+						measures: [],
+						sum: 0,
+						n: 0,
+						min: Infinity,
+						max: -Infinity
+					});
+				}
+				
+				for(let measure of measures){
+					let group = groups.get(measure.name);
+					group.measures.push(measure);
+					group.sum += measure.duration;
+					group.n++;
+					group.min = Math.min(group.min, measure.duration);
+					group.max = Math.max(group.max, measure.duration);
+				}
 
-        let names = new Set();
-        for (let measure of measures) {
-          names.add(measure.name);
-        }
+				let glQueries = Potree.resolveQueries(this.renderer.getContext());
+				for(let [key, value] of glQueries){
 
-        let groups = new Map();
-        for (let name of names) {
-          groups.set(name, {
-            measures: [],
-            sum: 0,
-            n: 0,
-            min: Infinity,
-            max: -Infinity,
-          });
-        }
+					let group = {
+						measures: value.map(v => {return {duration: v}}),
+						sum: value.reduce( (a, i) => a + i, 0),
+						n: value.length,
+						min: Math.min(...value),
+						max: Math.max(...value)
+					};
 
-        for (let measure of measures) {
-          let group = groups.get(measure.name);
-          group.measures.push(measure);
-          group.sum += measure.duration;
-          group.n++;
-          group.min = Math.min(group.min, measure.duration);
-          group.max = Math.max(group.max, measure.duration);
-        }
+					let groupname = `[tq] ${key}`;
+					groups.set(groupname, group);
+					names.add(groupname);
+				}
+				
+				for(let [name, group] of groups){
+					group.mean = group.sum / group.n;
+					group.measures.sort( (a, b) => a.duration - b.duration );
+					
+					if(group.n === 1){
+						group.median = group.measures[0].duration;
+					}else if(group.n > 1){
+						group.median = group.measures[parseInt(group.n / 2)].duration;
+					}
+					
+				}
+				
+				let cn = Array.from(names).reduce( (a, i) => Math.max(a, i.length), 0) + 5;
+				let cmin = 10;
+				let cmed = 10;
+				let cmax = 10;
+				let csam = 6;
+				
+				let message = ` ${"NAME".padEnd(cn)} |` 
+					+ ` ${"MIN".padStart(cmin)} |`
+					+ ` ${"MEDIAN".padStart(cmed)} |`
+					+ ` ${"MAX".padStart(cmax)} |`
+					+ ` ${"SAMPLES".padStart(csam)} \n`;
+				message += ` ${"-".repeat(message.length) }\n`;
+				
+				names = Array.from(names).sort();
+				for(let name of names){
+					let group = groups.get(name);
+					let min = group.min.toFixed(3);
+					let median = group.median.toFixed(3);
+					let max = group.max.toFixed(3);
+					let n = group.n;
+					
+					message += ` ${name.padEnd(cn)} |`
+						+ ` ${min.padStart(cmin)} |`
+						+ ` ${median.padStart(cmed)} |`
+						+ ` ${max.padStart(cmax)} |`
+						+ ` ${n.toString().padStart(csam)}\n`;
+				}
+				message += `\n`;
+				console.log(message);
+				
+				performance.clearMarks();
+				performance.clearMeasures();
+				this.toggle = timestamp;
+			}
+		}
+	}
 
-        let glQueries = Potree.resolveQueries(this.renderer.getContext());
-        for (let [key, value] of glQueries) {
-          let group = {
-            measures: value.map((v) => {
-              return { duration: v };
-            }),
-            sum: value.reduce((a, i) => a + i, 0),
-            n: value.length,
-            min: Math.min(...value),
-            max: Math.max(...value),
-          };
+	loop(timestamp){
 
-          let groupname = `[tq] ${key}`;
-          groups.set(groupname, group);
-          names.add(groupname);
-        }
+		if(this.stats){
+			this.stats.begin();
+		}
 
-        for (let [name, group] of groups) {
-          group.mean = group.sum / group.n;
-          group.measures.sort((a, b) => a.duration - b.duration);
+		if(Potree.measureTimings){
+			performance.mark("loop-start");
+		}
 
-          if (group.n === 1) {
-            group.median = group.measures[0].duration;
-          } else if (group.n > 1) {
-            group.median = group.measures[parseInt(group.n / 2)].duration;
-          }
-        }
+		this.update(this.clock.getDelta(), timestamp);
+		this.render();
 
-        let cn =
-          Array.from(names).reduce((a, i) => Math.max(a, i.length), 0) + 5;
-        let cmin = 10;
-        let cmed = 10;
-        let cmax = 10;
-        let csam = 6;
+		// let vrActive = viewer.renderer.xr.isPresenting;
+		// if(vrActive){
+		// 	this.update(this.clock.getDelta(), timestamp);
+		// 	this.render();
+		// }else{
 
-        let message =
-          ` ${"NAME".padEnd(cn)} |` +
-          ` ${"MIN".padStart(cmin)} |` +
-          ` ${"MEDIAN".padStart(cmed)} |` +
-          ` ${"MAX".padStart(cmax)} |` +
-          ` ${"SAMPLES".padStart(csam)} \n`;
-        message += ` ${"-".repeat(message.length)}\n`;
+		// 	this.update(this.clock.getDelta(), timestamp);
+		// 	this.render();
+		// }
 
-        names = Array.from(names).sort();
-        for (let name of names) {
-          let group = groups.get(name);
-          let min = group.min.toFixed(3);
-          let median = group.median.toFixed(3);
-          let max = group.max.toFixed(3);
-          let n = group.n;
 
-          message +=
-            ` ${name.padEnd(cn)} |` +
-            ` ${min.padStart(cmin)} |` +
-            ` ${median.padStart(cmed)} |` +
-            ` ${max.padStart(cmax)} |` +
-            ` ${n.toString().padStart(csam)}\n`;
-        }
-        message += `\n`;
-        console.log(message);
+		if(Potree.measureTimings){
+			performance.mark("loop-end");
+			performance.measure("loop", "loop-start", "loop-end");
+		}
+		
+		this.resolveTimings(timestamp);
 
-        performance.clearMarks();
-        performance.clearMeasures();
-        this.toggle = timestamp;
-      }
-    }
-  }
+		Potree.framenumber++;
 
-  loop(timestamp) {
-    if (this.stats) {
-      this.stats.begin();
-    }
+		if(this.stats){
+			this.stats.end();
+		}
+	}
 
-    if (Potree.measureTimings) {
-      performance.mark("loop-start");
-    }
+	postError(content, params = {}){
+		let message = this.postMessage(content, params);
 
-    this.update(this.clock.getDelta(), timestamp);
-    this.render();
+		message.element.addClass("potree_message_error");
 
-    // let vrActive = viewer.renderer.xr.isPresenting;
-    // if(vrActive){
-    // 	this.update(this.clock.getDelta(), timestamp);
-    // 	this.render();
-    // }else{
+		return message;
+	}
 
-    // 	this.update(this.clock.getDelta(), timestamp);
-    // 	this.render();
-    // }
+	postMessage(content, params = {}){
+		let message = new Message(content);
 
-    if (Potree.measureTimings) {
-      performance.mark("loop-end");
-      performance.measure("loop", "loop-start", "loop-end");
-    }
+		let animationDuration = 100;
 
-    this.resolveTimings(timestamp);
+		message.element.css("display", "none");
+		message.elClose.click( () => {
+			message.element.slideToggle(animationDuration);
 
-    Potree.framenumber++;
+			let index = this.messages.indexOf(message);
+			if(index >= 0){
+				this.messages.splice(index, 1);
+			}
+		});
 
-    if (this.stats) {
-      this.stats.end();
-    }
-  }
+		this.elMessages.prepend(message.element);
 
-  postError(content, params = {}) {
-    let message = this.postMessage(content, params);
+		message.element.slideToggle(animationDuration);
 
-    message.element.addClass("potree_message_error");
+		this.messages.push(message);
 
-    return message;
-  }
+		if(params.duration !== undefined){
+			let fadeDuration = 500;
+			let slideOutDuration = 200;
+			setTimeout(() => {
+				message.element.animate({
+					opacity: 0	
+				}, fadeDuration);
+				message.element.slideToggle(slideOutDuration);
+			}, params.duration)
+		}
 
-  postMessage(content, params = {}) {
-    let message = new Message(content);
-
-    let animationDuration = 100;
-
-    message.element.css("display", "none");
-    message.elClose.click(() => {
-      message.element.slideToggle(animationDuration);
-
-      let index = this.messages.indexOf(message);
-      if (index >= 0) {
-        this.messages.splice(index, 1);
-      }
-    });
-
-    this.elMessages.prepend(message.element);
-
-    message.element.slideToggle(animationDuration);
-
-    this.messages.push(message);
-
-    if (params.duration !== undefined) {
-      let fadeDuration = 500;
-      let slideOutDuration = 200;
-      setTimeout(() => {
-        message.element.animate(
-          {
-            opacity: 0,
-          },
-          fadeDuration
-        );
-        message.element.slideToggle(slideOutDuration);
-      }, params.duration);
-    }
-
-    return message;
-  }
-}
+		return message;
+	}
+};
