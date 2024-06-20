@@ -9,6 +9,8 @@ let sgHigh = new THREE.SphereGeometry(1, 128, 128);
 let sm = new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0x98F4A6 });
 let smHovered = new THREE.MeshBasicMaterial({side: THREE.BackSide, color: 0xff0000});
 let clearMeshMaterial = new THREE.MeshBasicMaterial({side: THREE.BackSide});
+clearMeshMaterial.transparent = true;
+clearMeshMaterial.opacity = 0.6;
 
 let raycaster = new THREE.Raycaster();
 
@@ -177,14 +179,20 @@ export class Images360 extends EventDispatcher{
 			let {course, pitch, roll} = image360;
 			//reset orientation everytime
 			this.sphere.rotation.set(0, 0, 0, 'ZYX');
-			// Apply inverse node rotations in order (-Z, -Y, -X)
-			this.sphere.rotateZ(-this.node.rotation.z);
-			this.sphere.rotateY(-this.node.rotation.y);
-			this.sphere.rotateX(-this.node.rotation.x);
-			//Apply course, pitch and roll
-			this.sphere.rotateZ(THREE.MathUtils.degToRad(-course + 90));
-			this.sphere.rotateY(THREE.MathUtils.degToRad(-pitch));
-			this.sphere.rotateX(THREE.MathUtils.degToRad(+roll + 90));
+
+			// Code for old coordinates.json files that use unit vectors. A unit vector has less degrees of freedom so it can be slightly incorrect in some cases.
+			/*
+			this.sphere.rotateY(MathUtils.degToRad(-90));
+			this.sphere.rotateX(MathUtils.degToRad(180));
+			const quat = new Quaternion().setFromUnitVectors(new Vector3(1,0,0),new Vector3(course,pitch,roll));
+			this.sphere.applyQuaternion(quat);
+			*/
+
+			// Code for new coordinates.json files that use euler angles (ZYX, extrinsic, in degrees).
+			this.sphere.rotation.set(THREE.MathUtils.degToRad(course), THREE.MathUtils.degToRad(pitch), THREE.MathUtils.degToRad(roll), 'ZYX');
+			this.sphere.rotateY(THREE.MathUtils.degToRad(-90));
+			this.sphere.rotateX(THREE.MathUtils.degToRad(180));
+
 			//to render at last so that its always visible ahead of BIM
 			this.sphere.renderOrder = 999;
 			//clearDepth removes any depthBuffer the render has so that the next object is always rendered and shown on top
@@ -425,7 +433,7 @@ export class Images360Loader{
 			mesh.position.set(...xy, altitude);
 			mesh.scale.set(1, 1, 1);
 			mesh.material.transparent = true;
-			mesh.material.opacity = 0.75;
+			mesh.material.opacity = 0.6;
 			mesh.image360 = image360;
 
 			{ // orientation
