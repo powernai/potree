@@ -38,8 +38,9 @@ import JSON5 from "../../libs/json5-2.1.3/json5.mjs";
 
 export class Viewer extends EventDispatcher{
 	
-	constructor(domElement, args = {}){
+	constructor(domElement, args = {}, cpmsRaycaster = null){
 		super();
+		this.cpmsRaycaster = cpmsRaycaster;
 
 		this.renderArea = domElement;
 		this.guiLoaded = false;
@@ -1309,14 +1310,14 @@ export class Viewer extends EventDispatcher{
 		// }
 
 		{ // create ORBIT CONTROLS
-			this.orbitControls = new OrbitControls(this, [0], true);
+			this.orbitControls = new OrbitControls(this, [0], true, this.cpmsRaycaster);
 			this.orbitControls.enabled = false;
 			this.orbitControls.addEventListener('start', this.disableAnnotations.bind(this));
 			this.orbitControls.addEventListener('end', this.enableAnnotations.bind(this));
 		}
 
 		{ // create ORBIT CONTROLS 2
-			this.orbitControls2 = new OrbitControls(this, [1], false);
+			this.orbitControls2 = new OrbitControls(this, [1], false, this.cpmsRaycaster);
 			this.orbitControls2.enabled = false;
 			this.orbitControls2.addEventListener('start', this.disableAnnotations.bind(this));
 			this.orbitControls2.addEventListener('end', this.enableAnnotations.bind(this));
