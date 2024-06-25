@@ -137,13 +137,15 @@ export class Images360 extends EventDispatcher{
 		return this._visible;
 	}
 
-	focus(image360){
+	focus(image360, fromOtherImage = false){
 		if(this.focusedImage !== null){
 			this.unfocus(true);
 		}
 
 		this.focusedImage = image360;
 
+		// When moving focus from one image to another, preserve the return position for the camera. Otherwise, set it from the current position.
+		previousView = fromOtherImage ? previousView : {};
 		previousView = {
 			controls: previousView.controls ?? this.viewer.controls,
 			position: previousView.position ?? this.viewer.scene.view.position.clone(),
@@ -208,13 +210,14 @@ export class Images360 extends EventDispatcher{
 		this.sphere.position.set(pos_vec.x, pos_vec.y, pos_vec.z);
 
 		let target = new THREE.Vector3(pos_vec.x, pos_vec.y, pos_vec.z);
-		let dir = target.clone().sub(this.viewer.scene.view.position).normalize();
+		// Keep the same facing direction when entering/switching between images.
+		let dir = this.viewer.scene.view.direction.clone().normalize();
 		let move = dir.multiplyScalar(0.000001);
 		let newCamPos = target.clone().sub(move);
 
 		this.viewer.scene.view.setView(
 			newCamPos, 
-			newCamPos, // this change is done to not update the look at vector when switched from old to new image. Updated by Varun Veginati
+			target,
 			500
 		);
 
