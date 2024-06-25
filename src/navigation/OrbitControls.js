@@ -21,7 +21,7 @@ import {EventDispatcher} from "../EventDispatcher.js";
  
 export class OrbitControls extends EventDispatcher{
 	
-	constructor(viewer, scissorZoneIdxs = [0], allowRotation = true){
+	constructor(viewer, scissorZoneIdxs = [0], allowRotation = true, cpmsRaycaster = null){
 		super();
 		
 		this.viewer = viewer;
@@ -33,6 +33,7 @@ export class OrbitControls extends EventDispatcher{
 		this.scissorZoneIdxs = scissorZoneIdxs;
 		// allowRotation=false means that only horizontal mouse drag rotation is allowed, no vertical/scroll rotation.
 		this.allowRotation = allowRotation;
+		this.cpmsRaycaster = cpmsRaycaster;
 		this.sceneControls = new THREE.Scene();
 
 		this.rotationSpeed = 5;
@@ -106,6 +107,12 @@ export class OrbitControls extends EventDispatcher{
 
 		let dblclick = (e) => {
 			if(this.scissorZoneIdxs.includes(e.scissorZoneIdx) && this.doubleClockZoomEnabled){
+				// Make sure pointcloud is not behind anything.
+				if(cpmsRaycaster) {
+					const raycast = cpmsRaycaster.castRay();
+					if(!raycast || !raycast.object || !this.scene.pointclouds.includes(raycast.object.parent))
+						return;
+				}
 				this.zoomToLocation(e.mouse);
 			}
 		};

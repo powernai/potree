@@ -42,7 +42,7 @@ class Image360{
 // To view the changes check this pull request -> https://github.com/powernai/potree/pull/1/files
 export class Images360 extends EventDispatcher{
 
-	constructor(viewer){
+	constructor(viewer, cpmsRaycaster){
 		super();
 
 		this.focusAction = (image)=>{};
@@ -64,6 +64,7 @@ export class Images360 extends EventDispatcher{
 
 		this.focusedImage = null;
 		this.currentlyHovered = null;
+		this.cpmsRaycaster = cpmsRaycaster;
 
 		let elUnfocus = document.createElement("input");
 		elUnfocus.type = "button";
@@ -310,6 +311,12 @@ export class Images360 extends EventDispatcher{
 	}
 
 	handleHovering(viewer){
+		if(this.cpmsRaycaster) {
+			// Check if this 360image set is behind anything else.
+			const raycast = this.cpmsRaycaster.castRay();
+			if(!raycast || raycast.object !== this)
+				return;
+		}
 		let mouse = viewer.inputHandler.mouse;
 		let domElement = viewer.renderer.domElement;
 
@@ -377,7 +384,7 @@ export class Images360 extends EventDispatcher{
 
 export class Images360Loader{
 
-	static async load(url, viewer, params = {}){
+	static async load(url, viewer, cpmsRaycaster, params = {}){
 
 		if(!params.transform){
 			params.transform = {
@@ -392,7 +399,7 @@ export class Images360Loader{
 		let lines = data.coordinates;
 		// let coordinateLines = lines.slice(1);
 
-		let images360 = new Images360(viewer);
+		let images360 = new Images360(viewer, cpmsRaycaster);
 
 		for(let line of lines){
 

@@ -232,7 +232,7 @@ export class OrientedImageLoader{
 		return imageParams;
 	}
 
-	static async load(cameraParamsPath, imageParamsPath, viewer, callback){
+	static async load(cameraParamsPath, imageParamsPath, viewer, cpmsRaycaster, callback){
 
 		const tStart = performance.now();
 
@@ -281,54 +281,76 @@ export class OrientedImageLoader{
 			}
 			evt.preventDefault();
 
-			//var array = getMousePosition( container, evt.clientX, evt.clientY );
-			const rect = viewer.renderer.domElement.getBoundingClientRect();
-			const [x, y] = [evt.clientX, evt.clientY];
-			// Get pixel position with respect to the canvas.
-			const mouse = new THREE.Vector2(
-				x - rect.left,
-				rect.bottom - y
-			);
-			//const intersects = getIntersects(onClickPosition, scene.children);
-			const camera = viewer.scene.getActiveCamera();
-
-			// Find the mini canvas containing the camera that the raycasts will be made with respect to.
-			let scissorWithImages;
-			for (scissorWithImages = viewer.scissorZones.length - 1; scissorWithImages >= 0; scissorWithImages--) {
-				if (camera == viewer.getCamera(scissorWithImages))
-					break;
+			let hitOrientedImages = true;
+			if(cpmsRaycaster) {
+				// Check if the mouse is on 2DImages in front of everything else.
+				hitOrientedImages = false;
+				let object;
+				try {
+					object = cpmsRaycaster.castRay().object;
+				}
+				catch(e) {}
+				while(object && !hitOrientedImages) {
+					try {
+						hitOrientedImages = object.current.object.images === orientedImages;
+					}
+					catch(e) {}
+					object = object.parent;
+				}
 			}
 
-			// Find the mini canvas containing the mouse.
-			// Backwards loop so the last rendered canvas (the one on top) catches the mouse in case of an overlap.
-			let scissorWithMouse;
-			for (scissorWithMouse = viewer.scissorZones.length - 1; scissorWithMouse >= 0; scissorWithMouse--) {
-				if (!viewer.scissorZones[scissorWithMouse].visible)
-					continue;
-				const scissor = viewer.getScissor(scissorWithMouse);
-				if (
-					mouse.x >= scissor.x &&
-					mouse.x <= scissor.x + scissor.width &&
-					mouse.y >= scissor.y &&
-					mouse.y <= scissor.y + scissor.height
-				)
-					break;
+			let intersects = [];
+			let correctScissor = false;
+			if(hitOrientedImages) {
+				//var array = getMousePosition( container, evt.clientX, evt.clientY );
+				const rect = viewer.renderer.domElement.getBoundingClientRect();
+				const [x, y] = [evt.clientX, evt.clientY];
+				// Get pixel position with respect to the canvas.
+				const mouse = new THREE.Vector2(
+					x - rect.left,
+					rect.bottom - y
+				);
+				//const intersects = getIntersects(onClickPosition, scene.children);
+				const camera = viewer.scene.getActiveCamera();
+
+				// Find the mini canvas containing the camera that the raycasts will be made with respect to.
+				let scissorWithImages;
+				for (scissorWithImages = viewer.scissorZones.length - 1; scissorWithImages >= 0; scissorWithImages--) {
+					if (camera == viewer.getCamera(scissorWithImages))
+						break;
+				}
+
+				// Find the mini canvas containing the mouse.
+				// Backwards loop so the last rendered canvas (the one on top) catches the mouse in case of an overlap.
+				let scissorWithMouse;
+				for (scissorWithMouse = viewer.scissorZones.length - 1; scissorWithMouse >= 0; scissorWithMouse--) {
+					if (!viewer.scissorZones[scissorWithMouse].visible)
+						continue;
+					const scissor = viewer.getScissor(scissorWithMouse);
+					if (
+						mouse.x >= scissor.x &&
+						mouse.x <= scissor.x + scissor.width &&
+						mouse.y >= scissor.y &&
+						mouse.y <= scissor.y + scissor.height
+					)
+						break;
+				}
+
+				// Determine if the mini canvas containing the mouse also contains the 2D images.
+				correctScissor = scissorWithMouse == scissorWithImages && scissorWithMouse != -1;
+
+				// Convert to coordinates with (-1,-1) at the bottom left and (1,1) at the top right of the viewport.
+				const viewport = viewer.getViewport(scissorWithImages);
+				mouse
+					.sub(new THREE.Vector2(viewport.x, viewport.y))
+					.divide(new THREE.Vector2(viewport.width, viewport.height))
+					.multiplyScalar(2)
+					.sub(new THREE.Vector2(1, 1));
+
+				const objects = orientedImages.map(i => i.mesh);
+				raycaster.setFromCamera( mouse, camera );
+				intersects = raycaster.intersectObjects( objects );
 			}
-
-			// Determine if the mini canvas containing the mouse also contains the 2D images.
-			const correctScissor = scissorWithMouse == scissorWithImages && scissorWithMouse != -1;
-
-			// Convert to coordinates with (-1,-1) at the bottom left and (1,1) at the top right of the viewport.
-			const viewport = viewer.getViewport(scissorWithImages);
-			mouse
-				.sub(new THREE.Vector2(viewport.x, viewport.y))
-				.divide(new THREE.Vector2(viewport.width, viewport.height))
-				.multiplyScalar(2)
-				.sub(new THREE.Vector2(1, 1));
-
-			const objects = orientedImages.map(i => i.mesh);
-			raycaster.setFromCamera( mouse, camera );
-			const intersects = raycaster.intersectObjects( objects );
 			let selectionChanged = false;
 
 			//added images._visible to trigger that
