@@ -314,12 +314,6 @@ export class Images360 extends EventDispatcher{
 	}
 
 	handleHovering(viewer){
-		if(this.cpmsRaycaster) {
-			// Check if this 360image set is behind anything else.
-			const raycast = this.cpmsRaycaster.castRay();
-			if(!raycast || raycast.object !== this)
-				return;
-		}
 		let mouse = viewer.inputHandler.mouse;
 		let domElement = viewer.renderer.domElement;
 
@@ -331,6 +325,12 @@ export class Images360 extends EventDispatcher{
 				!viewer.scissorZones[i].scene.images360.includes(this)
 			)
 				continue;
+			if(i == 0 && this.cpmsRaycaster) {
+				// Check if this 360image set is behind anything else.
+				const raycast = this.cpmsRaycaster.castRay();
+				if(!raycast || raycast.object !== this)
+					break;
+			}
 			let camera = viewer.getCamera(i);
 			let ray = Potree.Utils.mouseToRay(mouse, camera, 
 				domElement.clientWidth, domElement.clientHeight,
