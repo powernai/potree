@@ -137,15 +137,17 @@ export class Images360 extends EventDispatcher{
 		return this._visible;
 	}
 
-	focus(image360, fromOtherImage = false){
+	focus(image360){
 		if(this.focusedImage !== null){
 			this.unfocus(true);
+		}
+		else {
+			// When moving focus from one image to another, preserve the return position for the camera. Otherwise, set it from the current position.
+			previousView = {};
 		}
 
 		this.focusedImage = image360;
 
-		// When moving focus from one image to another, preserve the return position for the camera. Otherwise, set it from the current position.
-		previousView = fromOtherImage ? previousView : {};
 		previousView = {
 			controls: previousView.controls ?? this.viewer.controls,
 			position: previousView.position ?? this.viewer.scene.view.position.clone(),
@@ -256,11 +258,13 @@ export class Images360 extends EventDispatcher{
 
 		this.sphere.material = clearMeshMaterial;
 
+		/*
 		let pos = this.viewer.scene.view.position;
 		let target = this.viewer.scene.view.getPivot();
 		let dir = target.clone().sub(pos).normalize();
 		let move = dir.multiplyScalar(10);
 		let newCamPos = target.clone().sub(move);
+		*/
 
 		this.viewer.orbitControls.doubleClockZoomEnabled = true;
 		this.viewer.setControls(previousView.controls);
