@@ -66,6 +66,21 @@ export class Images360 extends EventDispatcher{
 		this.currentlyHovered = null;
 		this.cpmsRaycaster = cpmsRaycaster;
 
+		let elUnfocus = document.createElement("input");
+		elUnfocus.type = "button";
+		elUnfocus.value = "unfocus";
+		elUnfocus.style.position = "absolute";
+		elUnfocus.style.top = "3rem";
+		elUnfocus.style.right = "8px";
+		elUnfocus.style.zIndex = "10000";
+		elUnfocus.style.fontSize = "2em";
+		elUnfocus.addEventListener("click", () => this.unfocus());
+		this.elUnfocus = elUnfocus;
+
+		this.domRoot = viewer.renderer.domElement.parentElement;
+		this.domRoot.appendChild(elUnfocus);
+		this.elUnfocus.style.display = "none";
+
 		viewer.addEventListener("update", () => {
 			this.update(viewer);
 		});
@@ -159,6 +174,7 @@ export class Images360 extends EventDispatcher{
 			this.sphere.material = this.sphere.material.clone();
 			this.sphere.material.map = image360.texture;
 			this.sphere.material.needsUpdate = true;
+			this.elUnfocus.style.display = '';
 		});
 		if (!this.alternateFocus) {
 			this.sphere.material = clearMeshMaterial;
@@ -260,6 +276,8 @@ export class Images360 extends EventDispatcher{
 		);
 
 		this.focusedImage = null;
+
+		this.elUnfocus.style.display = "none";
 
 		if(!this.alternateFocus) {
 			this.sphere.material = sm;

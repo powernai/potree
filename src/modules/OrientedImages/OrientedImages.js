@@ -232,7 +232,7 @@ export class OrientedImageLoader{
 		return imageParams;
 	}
 
-	static async load(cameraParamsPath, imageParamsPath, viewer, cpmsRaycaster){
+	static async load(cameraParamsPath, imageParamsPath, viewer, cpmsRaycaster, callback){
 
 		const tStart = performance.now();
 
@@ -241,7 +241,7 @@ export class OrientedImageLoader{
 			OrientedImageLoader.loadImageParams(imageParamsPath),
 		]);
 
-		const orientedImageControls = new OrientedImageControls(viewer);
+		const orientedImageControls = new OrientedImageControls(viewer, callback);
 		const raycaster = new THREE.Raycaster();
 
 		const tEnd = performance.now();

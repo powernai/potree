@@ -7,7 +7,7 @@ const rightClick = 2;
 const leftClick = 0;
 
 export class OrientedImageControls extends EventDispatcher{
-	constructor(viewer){
+	constructor(viewer, exitCallback){
 		super();
 		
 		//used to add scene control callback;
@@ -39,6 +39,12 @@ export class OrientedImageControls extends EventDispatcher{
 		//this.elRight = $(`<input type="button" value="🡆" style="position: absolute; top: calc(50%); right: 10px; z-index: 100000" />`);
 		//this.elDown =  $(`<input type="button" value="🡇" style="position: absolute; bottom: 10px; left: calc(50%); z-index: 100000" />`);
 		//this.elLeft =  $(`<input type="button" value="🡄" style="position: absolute; top: calc(50%); left: 10px; z-index: 100000" />`);
+		this.elExit = $(`<input type="button" value="Back to 3D view" style="position: absolute; top: 10px; left: 10px; z-index: 100000" />`);
+
+		this.elExit.click( () => {
+			this.release();
+			exitCallback();
+		});
 
 		//this.elUp.click(()=>{this.up()});
 
@@ -149,15 +155,17 @@ export class OrientedImageControls extends EventDispatcher{
 		this.viewer.setControls(this);
 		this.viewer.scene.overrideCamera = this.shearCam;
 
+		const elCanvas = this.viewer.renderer.domElement;
+		const elRoot = $(elCanvas.parentElement);
+
 		this.shear = [0, 0];
 
-		//const elCanvas = this.viewer.renderer.domElement;
-		//const elRoot = $(elCanvas.parentElement);
 
 		//elRoot.append(this.elUp);
 		//elRoot.append(this.elRight);
 		//elRoot.append(this.elDown);
 		//elRoot.append(this.elLeft);
+		elRoot.append(this.elExit);
 	}
 	
 	setReleaseAction(action=()=>{}) {
@@ -175,6 +183,7 @@ export class OrientedImageControls extends EventDispatcher{
 		//this.elRight.detach();
 		//this.elDown.detach();
 		//this.elLeft.detach();
+		this.elExit.detach();
 
 		this.viewer.setFOV(this.originalFOV);
 		this.viewer.setControls(this.originalControls);
