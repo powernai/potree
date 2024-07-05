@@ -110,7 +110,7 @@ export class OrbitControls extends EventDispatcher{
 				// Make sure pointcloud is not behind anything.
 				if(cpmsRaycaster) {
 					const raycast = cpmsRaycaster.castRay();
-					if(!raycast || !raycast.object || !this.scene.pointclouds.includes(raycast.object.parent))
+					if(!raycast || !raycast.object || !(this.scene.pointclouds.includes(raycast.object) || this.scene.pointclouds.includes(raycast.object.parent)))
 						return;
 				}
 				this.zoomToLocation(e.mouse);
