@@ -418,13 +418,7 @@ export class OrientedImageLoader{
 		const moveToImage = (image) => {
 			console.log("move to image " + image.id);
 
-			const mesh = image.mesh;
-			const newCamPos = image.position.clone();
-			const newCamTarget = mesh.position.clone();
-
-			viewer.scene.view.setView(newCamPos, newCamTarget, 500, () => {
-				orientedImageControls.capture(image);
-			});
+			orientedImageControls.capture(image);
 
 			if(image.texture === null){
 
@@ -437,7 +431,7 @@ export class OrientedImageLoader{
 						if(target.texture === null){
 							target.texture = texture;
 							target.mesh.material.uniforms.tColor.value = texture;
-							mesh.material.needsUpdate = true;
+							target.mesh.material.needsUpdate = true;
 						}
 					}
 				);
@@ -446,9 +440,15 @@ export class OrientedImageLoader{
 				const imagePath = `${imageParamsPath}/../${target.id}`;
 				new THREE.TextureLoader().load(imagePath,
 					(texture) => {
+						// Moving fast, this image isn't focused anymore by the time the texture loads. Dispose the texture.
+						// Or, moving fast, this image was unfocused and refocused. Dispose the new texture and keep the old one.
+						if(target !== orientedImageControls.image || target.texture !== null) {
+							texture.dispose();
+							return;
+						}
 						target.texture = texture;
 						target.mesh.material.uniforms.tColor.value = texture;
-						mesh.material.needsUpdate = true;
+						target.mesh.material.needsUpdate = true;
 					}
 				);
 				
