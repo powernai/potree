@@ -142,22 +142,32 @@ export class OrientedImageControls extends EventDispatcher{
 		}
 
 		this.image = image;
+    
+		const mesh = image.mesh;
+		const newCamPos = image.position.clone();
+		const newCamTarget = mesh.position.clone();
+	
+		// Save old position to return to after.
+		this.oldCamPos = this.viewer.scene.view.position.clone();
+		this.oldCamTarget = this.viewer.scene.view.getPivot();
 
-		this.originalFOV = this.viewer.getFOV();
-		this.originalControls = this.viewer.getControls();
-
-		this.viewer.setControls(this);
-		this.viewer.scene.overrideCamera = this.shearCam;
-
-		this.shear = [0, 0];
-
-		//const elCanvas = this.viewer.renderer.domElement;
-		//const elRoot = $(elCanvas.parentElement);
-
-		//elRoot.append(this.elUp);
-		//elRoot.append(this.elRight);
-		//elRoot.append(this.elDown);
-		//elRoot.append(this.elLeft);
+		this.viewer.scene.view.setView(newCamPos, newCamTarget, 500, () => {
+			this.originalFOV = this.viewer.getFOV();
+			this.originalControls = this.viewer.getControls();
+	
+			this.viewer.setControls(this);
+			this.viewer.scene.overrideCamera = this.shearCam;
+	
+			this.shear = [0, 0];
+	
+			//const elCanvas = this.viewer.renderer.domElement;
+			//const elRoot = $(elCanvas.parentElement);
+	
+			//elRoot.append(this.elUp);
+			//elRoot.append(this.elRight);
+			//elRoot.append(this.elDown);
+			//elRoot.append(this.elLeft);
+		});
 	}
 	
 	setReleaseAction(action=()=>{}) {
@@ -165,19 +175,33 @@ export class OrientedImageControls extends EventDispatcher{
 	}
 
 	release(){
-		this.releaseAction(this.image);
-		
+		// Prevent multiple releases when spamming the Back button.
+		const imageToRelease = this.image;
 		this.image = null;
+		if(!imageToRelease)
+			return;
 
-		this.viewer.scene.overrideCamera = null;
+		this.releaseAction(imageToRelease);
+		
+		this.viewer.scene.view.setView(this.oldCamPos, this.oldCamTarget, 500, () => {
+			// Dispose if not already disposed.
+			if(imageToRelease.texture) {
+				imageToRelease.texture.dispose();
+				imageToRelease.texture = null;
+			}
+
+			this.viewer.scene.overrideCamera = null;
 
 		//this.elUp.detach();
 		//this.elRight.detach();
 		//this.elDown.detach();
 		//this.elLeft.detach();
 
-		this.viewer.setFOV(this.originalFOV);
-		this.viewer.setControls(this.originalControls);
+			this.viewer.setFOV(this.originalFOV);
+			this.viewer.setControls(this.originalControls);
+
+			this.image = null;
+		});
 	}
 
 	setScene (scene) {

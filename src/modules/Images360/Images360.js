@@ -235,7 +235,9 @@ export class Images360 extends EventDispatcher{
 
 		if(this.sphere.material !== sm && this.sphere.material !== clearMeshMaterial) {
 			this.sphere.material.map.dispose();
+			this.sphere.material.map = null;
 			this.sphere.material.dispose();
+			this.sphere.material = null;
 		}
 
 		this.sphere.visible = false;
