@@ -274,6 +274,8 @@ export class OrientedImageLoader{
 
 		let clicked = false;
 		const onMouseMove = (evt) => {
+			if(orientedImageControls.hasSomethingCaptured())
+				return;
 			clicked = false;
 			const tStart = performance.now();
 			if(hoveredElement){
@@ -467,7 +469,8 @@ export class OrientedImageLoader{
 			clicked = true;
 		}
 		const onMouseClick = (evt) => {
-			if (clicked && hoveredElement) {
+			// Clicking from 2D image to 2D image does not currently work. Disabling clicks for now.
+			if (clicked && hoveredElement && !orientedImageControls.hasSomethingCaptured()) {
 				if (orientedImageControls.hasSomethingCaptured()) {
 					orientedImageControls.release();
 				}
