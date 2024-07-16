@@ -255,29 +255,32 @@ export class Images360 extends EventDispatcher{
 		this.viewer.orbitControls.doubleClockZoomEnabled = true;
 		this.viewer.setControls(previousView.controls);
 
-		this.viewer.scene.view.setView(
-			previousView.position, 
-			previousView.target,
-			500,
-		);
-
 		this.focusedImage = null;
 
 		if(!this.alternateFocus) {
 			this.sphere.material = sm;
 		}
-		const executeUnfocusAction = () => {
+
+		this.viewer.scene.view.setView(
+			previousView.position, 
+			previousView.target,
+			500,
+			() => {
+				if(!immediate) {
+					for(let image of this.images){
+						image.mesh.visible = true;
+					}
+					this.selectingEnabled = true;
+				}
+			}
+		);
+		if(immediate) {
 			for(let image of this.images){
 				image.mesh.visible = true;
 			}
 			this.selectingEnabled = true;
 		}
-		if(immediate) {
-			executeUnfocusAction();
-			
-		} else {
-			setTimeout(executeUnfocusAction, 0);
-		}
+
 		this.unfocusAction(image);
 	}
 	
