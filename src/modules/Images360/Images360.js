@@ -207,13 +207,15 @@ export class Images360 extends EventDispatcher{
 			500
 		);
 
-		this.viewer.scissorZones[0].scene.images360.forEach((images360) => {
-			if (images360.selectingEnabled && images360.visible) {
-				visibleImages.push(images360);
-				images360.hide();
-				images360.releaseListeners();
-			}
-		});
+		if(this.focusedImage !== null) {
+			this.viewer.scissorZones[0].scene.images360.forEach((images360) => {
+				if (images360.selectingEnabled && images360.visible) {
+					visibleImages.push(images360);
+					images360.hide();
+					images360.releaseListeners();
+				}
+			});
+		}
 		
 		this.focusAction(image360);
 	}
@@ -255,29 +257,36 @@ export class Images360 extends EventDispatcher{
 		this.viewer.orbitControls.doubleClockZoomEnabled = true;
 		this.viewer.setControls(previousView.controls);
 
-		this.viewer.scene.view.setView(
-			previousView.position, 
-			previousView.target,
-			500,
-		);
-
 		this.focusedImage = null;
 
 		if(!this.alternateFocus) {
 			this.sphere.material = sm;
 		}
-		const executeUnfocusAction = () => {
-			for(let image of this.images){
-				image.mesh.visible = true;
+
+		this.viewer.scene.view.setView(
+			previousView.position, 
+			previousView.target,
+			500,
+			() => {
+				if(!immediate) {
+					if(this.focusedImage === null) {
+						for(let image of this.images){
+							image.mesh.visible = true;
+						}
+						this.selectingEnabled = true;
+					}
+				}
 			}
-			this.selectingEnabled = true;
-		}
+		);
 		if(immediate) {
-			executeUnfocusAction();
-			
-		} else {
-			setTimeout(executeUnfocusAction, 0);
+			if(this.focusedImage === null) {
+				for(let image of this.images){
+					image.mesh.visible = true;
+				}
+				this.selectingEnabled = true;
+			}
 		}
+
 		this.unfocusAction(image);
 	}
 	
