@@ -167,36 +167,29 @@ export class Viewer extends EventDispatcher{
 		set their scene and viewIdxInScene to be the same.
 
 		If you want the same scene from different angles on both mini canvases,
-		set their scene to be the same, and let viewIdxInScene be 0 for one of them and 1 for the other. 
-		Each new view angle in the same scene should have +1 viewIdxInScene.
+		set their scene to be the same, and let viewIdxInScene be 0 for one of them and 1 for the other, 2 for another, etc.
 
 		If you want the two mini canvases to move in sync but view different scenes,
 		set their controls to be the same.
+		
+		outerBounds is expressed as a fraction of the canvas, with 0 being the bottom or left and 1 being the top or right.
 
-		The whole renderer view is stretched/shrunk to fit the viewport, then cut to only display on the scissor.
-		But the viewport and scissor properties in the objects of the scissorZones arrays may not
-		exactly be used as viewport and scissor for the renderer, because of aspect-ratio-preserving logic
-		in the getScissor and getViewport functions.
+		For "exact" scissorMode, viewport and scissor will equal outerBounds. 
+		For "largestInside,topLeft" mode, if there is no background image, it uses "exact" mode, but if there is an image,
+		viewport will equal outerBounds and scissor will be the largest possible rectangle that fits inside outerBounds
+		while having the same aspect ratio as the original background image, placed in the top left corner of outerBounds.
 
-		Viewport and scissor are objects of the form {bottom, left, top, right}. Each is a number, 
-		where 0 represents the bottom or left and 1 represents the top or right
-		of the entire canvas. This specifies a rectangle portion of the canvas to use for the mini canvas.
-
-		If fitInside is true, viewport will proportionally scale to the maximum size that fits inside the scissor.
-		If it is false, viewport will proportionally scale to the minimum size that contains the scissor.
-		If viewportScissoring is true, the viewport and scissor given to the renderer will be identical,
-		and the entered viewport here will be the main factor in this.
+		The view of the scene is stretched/shrunk to fit the viewport, then cut to only display on the scissor.
+		The background image is instead stretched/shrunk to fit the scissor and cut to only display on the viewport.
 		*/
 		this.scissorZones = [
 			{
 				scene: null,
 				controls: null,
 				moveSpeed: 10,
-				fitInside: false,
-				viewportScissoring: false,
 				viewIdxInScene: 0,
-				scissor: { bottom: 0, left: 0, top: 1, right: 1 },
-				viewport: { bottom: 0, left: 0, top: 1, right: 1 },
+				outerBounds: { bottom: 0, left: 0, top: 1, right: 1 },
+				scissorMode: "exact",
 				id: "Main Canvas",
 				visible: true,
 			},
@@ -204,25 +197,13 @@ export class Viewer extends EventDispatcher{
 				scene: null,
 				controls: null,
 				moveSpeed: 10,
-				fitInside: true,
-				viewportScissoring: true,
 				viewIdxInScene: 0,
-				scissor: { bottom: 0.55, left: 0, top: 1, right: 0.25 },
-				viewport: { bottom: 0.55, left: 0, top: 1, right: 0.25 },
+				outerBounds: { bottom: 0.55, left: 0, top: 1, right: 0.25 },
+				scissorMode: "largestInside,topLeft",
 				id: "Street View Mini Canvas",
 				visible: false,
 			},
 		];
-
-		// Initial % values for viewport are multiplied by screen dimensions to find the current aspect ratio of the viewport.
-		// Changed to divide by the opposite dimension instead. This is proportionally the same but reduces roundoff.
-		for (let i = 0; i < this.scissorZones.length; i++) {
-			const viewport = this.scissorZones[i].viewport;
-			viewport.bottom /= this.renderArea.clientWidth;
-			viewport.left /= this.renderArea.clientHeight;
-			viewport.top /= this.renderArea.clientWidth;
-			viewport.right /= this.renderArea.clientHeight;
-		}
 
 		this.sceneVR = null;
 		this.overlay = null;
@@ -372,16 +353,6 @@ export class Viewer extends EventDispatcher{
 			this.scaleFactor = 1;
 
 			this.loadSettingsFromURL();
-
-			// Load background texture for mini canvas. Disable backgreound initially.
-			// const loader = new THREE.TextureLoader();
-			// const targetScene = this.scissorZones[1].scene;
-			// const viewport = this.scissorZones[1].viewport;
-			// loader.load('../../../Screenshot from 2024-05-13 09-34-04.png' , function(texture) {
-			// 	targetScene.scene.background = texture;
-			// 	viewport.right = texture.image.width;
-			// 	viewport.top = texture.image.height;
-			// });
 		}
 
 		// start rendering!
@@ -479,56 +450,46 @@ export class Viewer extends EventDispatcher{
 		const zone = this.scissorZones[idx];
 		return zone.scene.views[zone.viewIdxInScene].view;
 	}
-	getScissor(idx, ignoreViewportScissoring = false) {
-		if (!ignoreViewportScissoring && this.scissorZones[idx].viewportScissoring)
-			return this.getViewport(idx);
+	getScissor(idx) {
+		const zone = this.scissorZones[idx];
 
-		const zone = this.scissorZones[idx].scissor;
-		const width = this.renderArea.clientWidth;
-		const height = this.renderArea.clientHeight;
+		const viewport = this.getViewport(idx);
+		
+		if(zone.scissorMode === "exact" || !zone.scene.scene.background || !zone.scene.scene.background.image)
+			return viewport;
 
-		return new THREE.Vector4(
-			zone.left * width,
-			zone.bottom * height,
-			(zone.right - zone.left) * width,
-			(zone.top - zone.bottom) * height
-		);
+		if(zone.scissorMode === "largestInside,topLeft" && zone.scene.scene.background) {
+			const imageWidth = Math.max(1, zone.scene.scene.background.image.naturalWidth);
+			const imageHeight = Math.max(1, zone.scene.scene.background.image.naturalHeight);
+			const widthScaleFactor = viewport.width / imageWidth;
+			const heightScaleFactor = viewport.height / imageHeight;
+			if(heightScaleFactor < widthScaleFactor)
+				return new THREE.Vector4(
+					viewport.x,
+					viewport.y,
+					imageWidth * heightScaleFactor,
+					viewport.height,
+				);
+			else
+				return new THREE.Vector4(
+					viewport.x,
+					viewport.y + viewport.height - imageHeight * widthScaleFactor, // Translate from 0 = bottom of canvas to 0 = top
+					viewport.width,
+					imageHeight * widthScaleFactor,
+				);
+		}
 	}
 	getViewport(idx) {
-		const scissor = this.getScissor(idx, true);
-		const viewport = this.scissorZones[idx].viewport;
-		// Call Math.min or Math.max depending on fitInside.
-		let requiredScale = (
-			this.scissorZones[idx].fitInside ? Math.min : Math.max
-		)(
-			scissor.width / (viewport.right - viewport.left),
-			scissor.height / (viewport.top - viewport.bottom)
-		);
-		let viewportScale = [
-			(viewport.right - viewport.left) * requiredScale,
-			(viewport.top - viewport.bottom) * requiredScale,
-		];
-		// Center of the scissor box will be the center of viewport as well.
-		let viewportCenter = [
-			scissor.x + scissor.width / 2,
-			scissor.y + scissor.height / 2,
-		];
-		const width = this.renderArea.clientWidth;
-		const height = this.renderArea.clientHeight;
-		// Makes the mini canvas (idx 1) always go to the top left of avilable space instead of the center.
-		if(idx === 1) {
-			return new THREE.Vector4(
-				0,
-				height - viewportScale[1],
-				viewportScale[0],
-				viewportScale[1]
-			);
-		}
+		const zone = this.scissorZones[idx];
+
+		const canvasWidth = this.renderArea.clientWidth;
+		const canvasHeight = this.renderArea.clientHeight;
+
 		return new THREE.Vector4(
-			viewportCenter[0] - viewportScale[0] / 2,
-			viewportCenter[1] - viewportScale[1] / 2,
-			viewportScale[0],
-			viewportScale[1]
+			zone.outerBounds.left * canvasWidth,
+			zone.outerBounds.bottom * canvasHeight,
+			(zone.outerBounds.right - zone.outerBounds.left) * canvasWidth,
+			(zone.outerBounds.top - zone.outerBounds.bottom) * canvasHeight,
 		);
 	}
 
@@ -2280,32 +2241,9 @@ export class Viewer extends EventDispatcher{
 		const width = this.scaleFactor * this.renderArea.clientWidth;
 		const height = this.scaleFactor * this.renderArea.clientHeight;
 
-		{ // resize
-			this.renderer.setSize(width, height);
-			const pixelRatio = this.renderer.getPixelRatio();
-
-			for (let scissorZoneIdx = 0; scissorZoneIdx < this.scissorZones.length; scissorZoneIdx++) {
-				const viewport = this.getViewport(scissorZoneIdx);
-				const aspect = viewport.width / viewport.height;
-
-				const scene = this.scissorZones[scissorZoneIdx].scene;
-				let cameraHolder = scene.views[this.scissorZones[scissorZoneIdx].viewIdxInScene];
-
-				scene.cameraP.aspect = aspect;
-				scene.cameraP.updateProjectionMatrix();
-
-				let frustumScale = this.getView(scissorZoneIdx).radius;
-				cameraHolder.cameraO.left = -frustumScale;
-				cameraHolder.cameraO.right = frustumScale;
-				cameraHolder.cameraO.top = frustumScale * 1 / aspect;
-				cameraHolder.cameraO.bottom = -frustumScale * 1 / aspect;
-				cameraHolder.cameraO.updateProjectionMatrix();
-
-				scene.cameraScreenSpace.top = 1/aspect;
-				scene.cameraScreenSpace.bottom = -1/aspect;
-				scene.cameraScreenSpace.updateProjectionMatrix();
-			}
-		}
+		// resize
+		this.renderer.setSize(width, height);
+		const pixelRatio = this.renderer.getPixelRatio();
 
 		// Clear full canvas
 		this.renderer.setScissor(0,0,width,height);
@@ -2315,34 +2253,45 @@ export class Viewer extends EventDispatcher{
 			const zone = this.scissorZones[scissorZoneIdx];
 			if(!zone.visible)
 				continue;
-			if(zone.scissor.top < zone.scissor.bottom || zone.scissor.right < zone.scissor.left)
+
+			const scissor = this.getScissor(scissorZoneIdx);
+			if(!scissor.height > 0 || !scissor.width > 0)
 				continue;
-			this.renderer.setScissor(this.getScissor(scissorZoneIdx));
-			this.renderer.setViewport(this.getViewport(scissorZoneIdx));
-			this.renderer.setScissorTest(true);
-			// Code for making two mini canvases render the same scene
-			// but one of them toggles the visible and _visible properties of some items.
-			/*
-			let objectsToRestoreVisible = [];
-			let objectsToRestore_Visible = [];
-			if(scissorZoneIdx == 1) {
-				let object360 = this.scissorZones[scissorZoneIdx].scene.images360?.[0]?.node;
-				for(let i = 0; i < this.scissorZones[scissorZoneIdx].scene.scene.children.length; i++) {
-					let child = this.scissorZones[scissorZoneIdx].scene.scene.children[i];
-					if(child.visible && child != object360) {
-						child.visible = false;
-						objectsToRestoreVisible.push(child);
-					}
-				}
-				for(let i = 0; i < this.scissorZones[scissorZoneIdx].scene.pointclouds.length; i++) {
-					let child = this.scissorZones[scissorZoneIdx].scene.pointclouds[i];
-					if(child._visible) {
-						child._visible = false;
-						objectsToRestore_Visible.push(child);
-					}
-				}
+
+			const scene = zone.scene;
+
+			// Camera viewport sizing
+			const viewport = this.getViewport(scissorZoneIdx);
+			const viewportAspect = viewport.width / viewport.height;
+			
+			let cameraHolder = scene.views[zone.viewIdxInScene];
+
+			scene.cameraP.aspect = viewportAspect;
+			scene.cameraP.updateProjectionMatrix();
+
+			let frustumScale = this.getView(scissorZoneIdx).radius;
+			cameraHolder.cameraO.left = -frustumScale;
+			cameraHolder.cameraO.right = frustumScale;
+			cameraHolder.cameraO.top = frustumScale * 1 / viewportAspect;
+			cameraHolder.cameraO.bottom = -frustumScale * 1 / viewportAspect;
+			cameraHolder.cameraO.updateProjectionMatrix();
+
+			scene.cameraScreenSpace.top = 1/viewportAspect;
+			scene.cameraScreenSpace.bottom = -1/viewportAspect;
+			scene.cameraScreenSpace.updateProjectionMatrix();
+
+			// Background sizing
+			const background = scene.scene.background;
+			if(background && background.image) {
+				background.repeat.x = viewport.width / scissor.width;
+				background.repeat.y = viewport.height / scissor.height;
+				background.offset.y = 1 - background.repeat.y;
 			}
-			*/
+
+			// Rendering
+			this.renderer.setScissor(scissor);
+			this.renderer.setViewport(viewport);
+			this.renderer.setScissorTest(true);
 
 			pRenderer.render(this.renderer, scissorZoneIdx);
 			/*
