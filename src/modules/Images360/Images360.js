@@ -20,8 +20,6 @@ let previousView = {
 	target: null,
 };
 
-let visibleImages = [];
-
 class Image360{
 
 	constructor(file, time, longitude, latitude, altitude, course, pitch, roll){
@@ -40,9 +38,15 @@ class Image360{
 // This is file is updated by Varun Veginati. 
 // "viewer" is updated with "this.viewer" since when used in cpms it can't recognise what is viewer.
 // To view the changes check this pull request -> https://github.com/powernai/potree/pull/1/files
+
+// This file is updated by Jonathan Miner.
+// Access to CpmsRaycaster is given to allow all types of objects to block hovering/clicks on the images.
+// Access to T60ImageManager is given so that when unfocusing, it will now make other images visible even if they did not exist at the time of focusing.
+// Previously, it relied on creating a list of all images at the time of focusing, which it would make visible at the time of unfocusing.
+// It also now considers multiple visibility requirements and does not show other files upon unfocusing unless they meet all requirements.
 export class Images360 extends EventDispatcher{
 
-	constructor(viewer, cpmsRaycaster){
+	constructor(viewer, cpmsRaycaster, manager){
 		super();
 
 		this.focusAction = (image)=>{};
@@ -60,15 +64,16 @@ export class Images360 extends EventDispatcher{
 		this.sphere.scale.set(1000, 1000, 1000);
 		this.node.add(this.sphere);
 		this._visible = true;
+		this.manager = manager;
 		// this.node.add(label);
 
 		this.focusedImage = null;
 		this.currentlyHovered = null;
 		this.cpmsRaycaster = cpmsRaycaster;
 
-		viewer.addEventListener("update", () => {
-			this.update(viewer);
-		});
+		this.onUpdate = () => this.update(viewer);
+		viewer.addEventListener("update", this.onUpdate);
+
 		viewer.inputHandler.addInputListener(this);
 
 		this.focusFunction = () => {
@@ -207,28 +212,11 @@ export class Images360 extends EventDispatcher{
 			500
 		);
 
-		if(this.focusedImage !== null) {
-			this.viewer.scissorZones[0].scene.images360.forEach((images360) => {
-				if (images360.selectingEnabled && images360.visible) {
-					visibleImages.push(images360);
-					images360.hide();
-					images360.releaseListeners();
-				}
-			});
-		}
-		
 		this.focusAction(image360);
 	}
 
 	unfocus(immediate = false){
 		
-		visibleImages.forEach((images360) => {
-			images360.show();
-			images360.addListeners();
-		});
-		visibleImages = [];
-		
-
 		let image = this.focusedImage;
 
 		if(image === null){
@@ -270,8 +258,10 @@ export class Images360 extends EventDispatcher{
 			() => {
 				if(!immediate) {
 					if(this.focusedImage === null) {
-						for(let image of this.images){
-							image.mesh.visible = true;
+						if(this.visible) {
+							for(let image of this.images){
+								image.mesh.visible = true;
+							}
 						}
 						this.selectingEnabled = true;
 					}
@@ -280,8 +270,10 @@ export class Images360 extends EventDispatcher{
 		);
 		if(immediate) {
 			if(this.focusedImage === null) {
-				for(let image of this.images){
-					image.mesh.visible = true;
+				if(this.visible) {
+					for(let image of this.images){
+						image.mesh.visible = true;
+					}
 				}
 				this.selectingEnabled = true;
 			}
@@ -344,25 +336,25 @@ export class Images360 extends EventDispatcher{
 		if(intersections.length === 0){
 			// label.visible = false;
 
-			return;
+		return;
 		}
 
-		let intersection = intersections[0];
-		// Highlight the same sphere on other scene. Don't highlight if zoomed into the 360 view.
-		if (!this.focusedImage && intersections.length > 1) {
-			this.currentlyHovered = intersection.object;
-			this.currentlyHovered.material = smHovered;
-		}
-		if (this.companionObject && !this.companionObject.focusedImage && this.alternateFocus && intersections.length > 1) {
-			let objIdx = this.node.children.indexOf(intersection.object);
-			this.companionObject.currentlyHovered = this.companionObject.node.children[objIdx];
-			this.companionObject.currentlyHovered.material = smHovered;
-		}
+			let intersection = intersections[0];
+			// Highlight the same sphere on other scene. Don't highlight if zoomed into the 360 view.
+			if (!this.focusedImage && intersections.length > 1) {
+				this.currentlyHovered = intersection.object;
+this.currentlyHovered.material = smHovered;
+			}
+			if (this.companionObject && !this.companionObject.focusedImage && this.alternateFocus && intersections.length > 1) {
+				let objIdx = this.node.children.indexOf(intersection.object);
+				this.companionObject.currentlyHovered = this.companionObject.node.children[objIdx];
+				this.companionObject.currentlyHovered.material = smHovered;
+			}
 
-		//label.visible = true;
-		//label.setText(this.currentlyHovered.image360.file);
-		//this.currentlyHovered.getWorldPosition(label.position);
-	}
+			//label.visible = true;
+			//label.setText(this.currentlyHovered.image360.file);
+			//this.currentlyHovered.getWorldPosition(label.position);
+			}
 
 	update(){
 
@@ -377,6 +369,13 @@ export class Images360 extends EventDispatcher{
 			this.handleHovering(viewer);
 		}
 
+		const newVisible = this.manager.shouldBeVisible(this);
+		if(newVisible && !this.visible) {
+			this.show();
+		}
+		else if(!newVisible && this.visible) {
+			this.hide();
+		}
 	}
 
 };
@@ -384,7 +383,7 @@ export class Images360 extends EventDispatcher{
 
 export class Images360Loader{
 
-	static async load(url, viewer, cpmsRaycaster, params = {}){
+	static async load(url, viewer, cpmsRaycaster, manager, params = {}){
 
 		if(!params.transform){
 			params.transform = {
@@ -399,7 +398,7 @@ export class Images360Loader{
 		let lines = data.coordinates;
 		// let coordinateLines = lines.slice(1);
 
-		let images360 = new Images360(viewer, cpmsRaycaster);
+		let images360 = new Images360(viewer, cpmsRaycaster, manager);
 
 		for(let line of lines){
 
