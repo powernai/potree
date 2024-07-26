@@ -231,6 +231,7 @@ export class Scene extends EventDispatcher{
 				'images': images
 			});
 		}
+		images.viewer.removeEventListener("update", images.onUpdate);
 	}
 
 	addGeopackage(geopackage){
