@@ -160,7 +160,8 @@ export class Images360 extends EventDispatcher{
 				image360.texture.dispose();
 				return;
 			}
-			this.sphere.visible = true;
+			if(this.visible)
+				this.sphere.visible = true;
 			this.sphere.material = this.sphere.material.clone();
 			this.sphere.material.map = image360.texture;
 			this.sphere.material.needsUpdate = true;
