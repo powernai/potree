@@ -10,6 +10,7 @@ export class NavigationCube extends THREE.Object3D {
 		this.domArea = this.viewer.renderArea;
 		this.width = 125; // in px
 		this.fitToObject = () => {}; // function to compute boundingBox
+		this.disable = false;
 
 		let createPlaneMaterial = (img) => {
 			let textureLoader = new THREE.TextureLoader();
@@ -93,7 +94,7 @@ export class NavigationCube extends THREE.Object3D {
 		this.camera.rotation.order = "ZXY";
 
 		let onMouseDown = (event) => {
-			if (!this.visible) {
+			if (!this.visible || this.disable) {
 				return;
 			}
 			
@@ -128,7 +129,7 @@ export class NavigationCube extends THREE.Object3D {
 				this.viewer.setView(this.pickedFace, bbox);
 			}
 		};
-
+		
 		this.viewer.renderer.domElement.addEventListener('mousedown', onMouseDown, false);
 	}
 
