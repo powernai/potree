@@ -59,7 +59,7 @@ export class PotreeRenderer {
 		if(viewer.background === "skybox"){
 			const cameraP =
 				viewer.scissorZones[scissorIdx].scene.views[
-					scissorZones[scissorIdx].viewIdxInScene
+					viewer.scissorZones[scissorIdx].viewIdxInScene
 				].cameraP;
 			viewer.skybox.camera.rotation.copy(cameraP.rotation);
 			viewer.skybox.camera.fov = cameraP.fov;

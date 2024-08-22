@@ -352,7 +352,7 @@ export class Measure extends THREE.Object3D {
 		return sphereMaterial;
 	};
 
-	addMarker (point, rayCastPosition = () => {}) {
+	addMarker (point, rayCastPosition = () => {return null}) {
 		if (point.x != null) {
 			point = {position: point};
 		}else if(point instanceof Array){
@@ -448,6 +448,7 @@ export class Measure extends THREE.Object3D {
 						for (let key of Object.keys(I.point).filter(e => e !== 'position')) {
 							point[key] = I.point[key];
 						}
+						this.setPosition(i, I.location)
 					}
 				}
 				let i = this.spheres.indexOf(e.drag.object);

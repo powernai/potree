@@ -215,6 +215,7 @@ export function loadPointCloud(path, name, callback){
 		}
 	});
 
+
 	if(callback){
 		promise.then(pointcloud => {
 			loaded(pointcloud);
