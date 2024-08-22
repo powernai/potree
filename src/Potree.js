@@ -214,10 +214,6 @@ export function loadPointCloud(path, name, callback){
 			console.error(new Error(`failed to load point cloud from URL: ${path}`));
 		}
 	});
-	promise = promise.then((pointcloud) => {
-		pointcloud.pointcloud.pcoGeometry.offset.set(0,0,0);
-		return pointcloud;
-	});
 
 	if(callback){
 		promise.then(pointcloud => {
