@@ -144,8 +144,8 @@ export class OrientedImageControls extends EventDispatcher{
 		this.image = image;
     
 		const mesh = image.mesh;
-		const newCamPos = image.position.clone();
-		const newCamTarget = mesh.position.clone();
+		const newCamPos = image.position.clone().multiply(mesh.parent.scale).applyEuler(mesh.parent.rotation).add(mesh.parent.position);
+		const newCamTarget = mesh.position.clone().multiply(mesh.parent.scale).applyEuler(mesh.parent.rotation).add(mesh.parent.position);
 	
 		// Save old position to return to after.
 		this.oldCamPos = this.viewer.scene.view.position.clone();
