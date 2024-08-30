@@ -101,7 +101,10 @@ export class PotreeRenderer {
 		
 		viewer.transformationTool.update();
 		
-		viewer.dispatchEvent({type: "render.pass.perspective_overlay",viewer: viewer});
+		// Only render things like measurement lines on the main canvas.
+		if(scissorIdx === 0) {
+			viewer.dispatchEvent({type: "render.pass.perspective_overlay",viewer: viewer});
+		}
 
 		// renderer.render(viewer.controls.sceneControls, camera);
 		// renderer.render(viewer.clippingTool.sceneVolume, camera);
