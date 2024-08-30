@@ -384,7 +384,7 @@ export class OrientedImageLoader{
 				const far = 1000 * 1000;
 				const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
 				camera.rotation.order = viewer.scene.getActiveCamera().rotation.order;
-				camera.rotation.setFromQuaternion(new Quaternion().setFromEuler(img.mesh.parent.rotation).multiply(new Quaternion().setFromEuler(img.mesh.rotation)));
+				camera.rotation.setFromQuaternion(new THREE.Quaternion().setFromEuler(img.mesh.parent.rotation).multiply(new THREE.Quaternion().setFromEuler(img.mesh.rotation)));
 				{
 					const mesh = img.mesh;
 					const dir = mesh.getWorldDirection().applyEuler(mesh.parent.rotation);
