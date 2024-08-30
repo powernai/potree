@@ -948,19 +948,20 @@ export class Measure extends THREE.Object3D {
 				this.calcVolume = false;
 				this.volumeLabel.position.copy(centroid);
 				this.volumeLabel.visible = this.showVolume && this.points.length >= 3;
-				let volume = this.getVolume();
-				let suffix = "";
-				if (this.lengthUnit != null && this.lengthUnitDisplay != null) {
-					volume =
-						(volume / Math.pow(this.lengthUnit.unitspermeter, 3)) *
-						Math.pow(this.lengthUnitDisplay.unitspermeter, 3); //convert to cubic meters then to the cubic display unit
-					suffix = this.lengthUnitDisplay.code;
-				}
-
-				let txtArea = Utils.addCommas(volume.toFixed(1));
-				let msg = `${txtArea} ${suffix}\u00B3`;
-				this.volumeLabel.setText(msg);
+				this.volume = this.getVolume();
 			}
+			let displayVolume = this.volume;
+			let suffix = "";
+			if (this.lengthUnit != null && this.lengthUnitDisplay != null) {
+				displayVolume =
+					(displayVolume / Math.pow(this.lengthUnit.unitspermeter, 3)) *
+					Math.pow(this.lengthUnitDisplay.unitspermeter, 3); //convert to cubic meters then to the cubic display unit
+				suffix = this.lengthUnitDisplay.code;
+			}
+
+			let txtArea = Utils.addCommas(displayVolume.toFixed(1));
+			let msg = `${txtArea} ${suffix}\u00B3`;
+			this.volumeLabel.setText(msg);
 		}
 
 		// this.updateAzimuth();

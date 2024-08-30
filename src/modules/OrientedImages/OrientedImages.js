@@ -293,10 +293,9 @@ export class OrientedImageLoader{
 				}
 				catch(e) {}
 				while(object && !hitOrientedImages) {
-					try {
+					if(object && object.current && object.current.object) {
 						hitOrientedImages = object.current.object.images === orientedImages;
 					}
-					catch(e) {}
 					object = object.parent;
 				}
 			}
