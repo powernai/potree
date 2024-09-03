@@ -176,7 +176,17 @@ export class TransformationTool {
 			});
 		}
 	}
-
+	selectionChanged(event) {
+		for (let selected of this.selection) {
+			this.viewer.inputHandler.blacklist.delete(selected);
+		}
+	
+		this.selection = event.selection;
+	
+		for (let selected of this.selection) {
+			this.viewer.inputHandler.blacklist.add(selected);
+		}
+		}
 	initializeFocusHandles(){
 		//let sgBox = new THREE.BoxGeometry(1, 1, 1);
 		let sgPlane = new THREE.PlaneGeometry(4, 4, 1, 1);

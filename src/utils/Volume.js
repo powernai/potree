@@ -196,7 +196,11 @@ export class BoxVolume extends Volume{
 			});
 		}
 	}
-
+	makeTransparent () {
+		const material = new THREE.LineBasicMaterial({opacity:0,transparent:true})
+		this.frame.material=material
+		
+	}
 	getVolume(){
 		return Math.abs(this.scale.x * this.scale.y * this.scale.z);
 	}
