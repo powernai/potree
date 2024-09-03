@@ -87,9 +87,7 @@ export class Images360 extends EventDispatcher{
 					}
 				} else {
 					// calling focus on clicking from main 4D scene
-					if(!this.focusedImage) {
-						this.focus(this.currentlyHovered.image360);
-					}
+					this.focus(this.currentlyHovered.image360);
 				}
 			}
 		};
@@ -128,8 +126,8 @@ export class Images360 extends EventDispatcher{
 	}
 
 	focus(image360){
-		if(this.focusedImage !== null){
-			this.unfocus(true);
+		if(this.manager.isFocussed()){
+			this.manager.unFocus(true);
 		}
 		else {
 			// When moving focus from one image to another, preserve the return position for the camera. Otherwise, set it from the current position.
@@ -147,11 +145,15 @@ export class Images360 extends EventDispatcher{
 		this.viewer.setControls(this.viewer.orbitControls);
 		this.viewer.orbitControls.doubleClockZoomEnabled = false;
 
+		// Make focusedImage's object invisible and other objects small.
 		for(let image of this.images){
-			image.mesh.visible = false;
-		}
+			const scale = 0.05;
+			// This line would give all the objects the same screen-size regardless of distance.
+			// But it seems too hard to navigate the images like this, it's hard to get a sense of the 3D shape.
+			//const scale = 0.01*image.mesh.position.distanceTo(image360.mesh.position);
 
-		this.selectingEnabled = false;
+			image.mesh.scale.set(scale,scale,scale);
+		}
 
 		this.load(image360).then( () => {
 			// Moving fast, this sphere isn't focused anymore by the time the texture loads. Dispose the texture.
@@ -261,7 +263,7 @@ export class Images360 extends EventDispatcher{
 					if(this.focusedImage === null) {
 						if(this.visible) {
 							for(let image of this.images){
-								image.mesh.visible = true;
+								image.mesh.scale.set(1,1,1);
 							}
 						}
 						this.selectingEnabled = true;
@@ -273,7 +275,7 @@ export class Images360 extends EventDispatcher{
 			if(this.focusedImage === null) {
 				if(this.visible) {
 					for(let image of this.images){
-						image.mesh.visible = true;
+						image.mesh.scale.set(1,1,1);
 					}
 				}
 				this.selectingEnabled = true;
@@ -329,7 +331,11 @@ export class Images360 extends EventDispatcher{
 			if (ray) {
 				// let tStart = performance.now();
 				raycaster.ray.copy(ray);
-				intersections.push(raycaster.intersectObjects(this.node.children));
+				let spheres = this.node.children;
+				if(this.focusedImage) {
+					spheres = spheres.filter((sphere) => sphere !== this.focusedImage.mesh);
+				}
+				intersections.push(raycaster.intersectObjects(spheres));
 			}
 		}
 		intersections = intersections.flat();
@@ -342,7 +348,7 @@ export class Images360 extends EventDispatcher{
 
 			let intersection = intersections[0];
 			// Highlight the same sphere on other scene. Don't highlight if zoomed into the 360 view.
-			if (!this.focusedImage && intersections.length > 1) {
+			if (intersections.length > 1) {
 				this.currentlyHovered = intersection.object;
 this.currentlyHovered.material = smHovered;
 			}
