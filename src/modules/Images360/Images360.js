@@ -72,7 +72,6 @@ export class Images360 extends EventDispatcher{
 		this.cpmsRaycaster = cpmsRaycaster;
 
 		this.onUpdate = () => this.update(viewer);
-		viewer.addEventListener("update", this.onUpdate);
 
 		viewer.inputHandler.addInputListener(this);
 
