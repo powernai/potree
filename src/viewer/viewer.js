@@ -919,67 +919,65 @@ export class Viewer extends EventDispatcher{
 		this.dispatchEvent({ 'type': 'length_unit_changed', 'viewer': this, value: lengthUnitValue });
 	};
 
-	zoomTo(node, factor, animationDuration = 0){
-		for (let scissorIdx = 0; scissorIdx < this.scissorZones.length; scissorIdx++) {
-			let viewHolder = this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx].viewIdxInScene];
-			let view = viewHolder.view;
+	zoomTo(node, factor, animationDuration = 0, scissorIdx = 0){
+		let viewHolder = this.scissorZones[scissorIdx].scene.views[this.scissorZones[scissorIdx].viewIdxInScene];
+		let view = viewHolder.view;
 
-			let camera = viewHolder.cameraP.clone();
-			camera.rotation.copy(viewHolder.cameraP.rotation);
-			camera.rotation.order = "ZXY";
-			camera.rotation.x = Math.PI / 2 + view.pitch;
-			camera.rotation.y = view.roll;
-			camera.rotation.z = view.yaw;
-			camera.updateMatrix();
-			camera.updateMatrixWorld();
-			camera.zoomTo(node, factor);
+		let camera = viewHolder.cameraP.clone();
+		camera.rotation.copy(viewHolder.cameraP.rotation);
+		camera.rotation.order = "ZXY";
+		camera.rotation.x = Math.PI / 2 + view.pitch;
+		camera.rotation.y = view.roll;
+		camera.rotation.z = view.yaw;
+		camera.updateMatrix();
+		camera.updateMatrixWorld();
+		camera.zoomTo(node, factor);
 
-			let bs;
-			if (node.boundingSphere) {
-				bs = node.boundingSphere;
-			} else if (node.geometry && node.geometry.boundingSphere) {
-				bs = node.geometry.boundingSphere;
-			} else {
-				bs = node.boundingBox.getBoundingSphere(new THREE.Sphere());
-			}
-			bs = bs.clone().applyMatrix4(node.matrixWorld); 
+		let bs;
+		if (node.boundingSphere) {
+			bs = node.boundingSphere;
+		} else if (node.geometry && node.geometry.boundingSphere) {
+			bs = node.geometry.boundingSphere;
+		} else {
+			bs = node.boundingBox.getBoundingSphere(new THREE.Sphere());
+		}
+		bs = bs.clone().applyMatrix4(node.matrixWorld); 
 
-			let startPosition = view.position.clone();
-			let endPosition = camera.position.clone();
-			let startTarget = view.getPivot();
-			let endTarget = bs.center;
-			let startRadius = view.radius;
-			let endRadius = endPosition.distanceTo(endTarget);
+		let startPosition = view.position.clone();
+		let endPosition = camera.position.clone();
+		let startTarget = view.getPivot();
+		let endTarget = bs.center;
+		let startRadius = view.radius;
+		let endRadius = endPosition.distanceTo(endTarget);
 
-			let easing = TWEEN.Easing.Quartic.Out;
+		let easing = TWEEN.Easing.Quartic.Out;
 
-			{ // animate camera position
-				let pos = startPosition.clone();
-				let tween = new TWEEN.Tween(pos).to(endPosition, animationDuration);
-				tween.easing(easing);
+		{ // animate camera position
+			let pos = startPosition.clone();
+			let tween = new TWEEN.Tween(pos).to(endPosition, animationDuration);
+			tween.easing(easing);
 
-				tween.onUpdate(() => {
-					view.position.copy(pos);
-				});
+			tween.onUpdate(() => {
+				view.position.copy(pos);
+			});
 
-				tween.start();
-			}
+			tween.start();
+		}
 
-			{ // animate camera target
-				let target = startTarget.clone();
-				let tween = new TWEEN.Tween(target).to(endTarget, animationDuration);
-				tween.easing(easing);
-				tween.onUpdate(() => {
-					view.lookAt(target);
-				});
-				tween.onComplete(() => {
-					view.lookAt(target);
-					this.dispatchEvent({type: 'focusing_finished', target: this});
-				});
+		{ // animate camera target
+			let target = startTarget.clone();
+			let tween = new TWEEN.Tween(target).to(endTarget, animationDuration);
+			tween.easing(easing);
+			tween.onUpdate(() => {
+				view.lookAt(target);
+			});
+			tween.onComplete(() => {
+				view.lookAt(target);
+				this.dispatchEvent({type: 'focusing_finished', target: this});
+			});
 
-				this.dispatchEvent({type: 'focusing_started', target: this});
-				tween.start();
-			}
+			this.dispatchEvent({type: 'focusing_started', target: this});
+			tween.start();
 		}
 	};
 
