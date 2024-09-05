@@ -218,6 +218,7 @@ export class Scene extends EventDispatcher{
 		 	'scene': this,
 		 	'images': images
 		});
+		images.viewer.addEventListener("update", images.onUpdate);
 	}
 
 	remove360Images(images){
