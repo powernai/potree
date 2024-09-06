@@ -132,6 +132,7 @@ export class Images360 extends EventDispatcher{
 			// When moving focus from one image to another, preserve the return position for the camera. Otherwise, set it from the current position.
 			previousView = {};
 		}
+		this.manager.setSelected360(this.parent);
 
 		this.focusedImage = image360;
 
@@ -145,6 +146,7 @@ export class Images360 extends EventDispatcher{
 		this.viewer.orbitControls.doubleClockZoomEnabled = false;
 
 		// Make focusedImage's object invisible and other objects small.
+		this.focusedImage.mesh.visible = false;
 		for(let image of this.images){
 			const scale = 0.05;
 			// This line would give all the objects the same screen-size regardless of distance.
@@ -197,12 +199,11 @@ export class Images360 extends EventDispatcher{
 			};
 		}
 
-		//get world position instead of relative position
-		let pos_vec = new THREE.Vector3();
-		image360.mesh.getWorldPosition(pos_vec);
-		this.sphere.position.set(pos_vec.x, pos_vec.y, pos_vec.z);
+		this.sphere.position.copy(image360.mesh.position);
 
-		let target = new THREE.Vector3(pos_vec.x, pos_vec.y, pos_vec.z);
+		//get world position instead of relative position
+		let target = new THREE.Vector3();
+		image360.mesh.getWorldPosition(target);
 		// Keep the same facing direction when entering/switching between images.
 		let dir = this.viewer.scene.view.direction.clone().normalize();
 		let move = dir.multiplyScalar(0.000001);
@@ -247,6 +248,7 @@ export class Images360 extends EventDispatcher{
 		this.viewer.orbitControls.doubleClockZoomEnabled = true;
 		this.viewer.setControls(previousView.controls);
 
+		this.focusedImage.mesh.visible = true;
 		this.focusedImage = null;
 
 		if(!this.alternateFocus) {
