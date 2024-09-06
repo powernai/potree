@@ -132,6 +132,7 @@ export class Images360 extends EventDispatcher{
 			// When moving focus from one image to another, preserve the return position for the camera. Otherwise, set it from the current position.
 			previousView = {};
 		}
+		this.manager.setSelected360(this.parent);
 
 		this.focusedImage = image360;
 
