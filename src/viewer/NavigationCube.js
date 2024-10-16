@@ -11,7 +11,9 @@ export class NavigationCube extends THREE.Object3D {
 		this.width = 125; // in px
 		this.fitToObject = () => {}; // function to compute boundingBox
 		this.disable = false;
-
+		this.hovered =false;
+		this.mouse = new THREE.Vector2();
+		this.raycaster = new THREE.Raycaster();
 		let createPlaneMaterial = (img) => {
 			let textureLoader = new THREE.TextureLoader();
 			let canvas = document.createElement("canvas");
@@ -93,44 +95,58 @@ export class NavigationCube extends THREE.Object3D {
 		this.camera.updateMatrixWorld();
 		this.camera.rotation.order = "ZXY";
 
+		let onMouseMove = (event) => {
+			const boundingBox = this.domArea.getBoundingClientRect();
+			this.mouse.x = event.clientX - (window.innerWidth - this.width);
+			this.mouse.y = this.width - (boundingBox.bottom - 75 - event.clientY); // 75 is distance in px from bottom of canvas where cube is
+			// To change the distance, also make the same change in PotreeRenderer class in setViewport()
+			if (this.mouse.x < 0 || this.mouse.y > this.width) return;
+			
+			this.mouse.x = (this.mouse.x / this.width) * 2 - 1;
+			this.mouse.y = -(this.mouse.y / this.width) * 2 + 1;
+			
+			this.raycaster.setFromCamera(this.mouse, this.camera);
+			this.raycaster.ray.origin.sub(
+				this.camera.getWorldDirection(new THREE.Vector3())
+			);
+			
+			let intersects = this.raycaster.intersectObjects(this.children);
+			this.hovered=intersects.length ? true:false
+			return intersects
+		};
 		let onMouseDown = (event) => {
 			if (!this.visible || this.disable) {
-				return;
+				return ;
 			}
-			
+	
 			this.pickedFace = null;
-			let mouse = new THREE.Vector2();
-			const boundingBox = this.domArea.getBoundingClientRect();
-			mouse.x = event.clientX - (window.innerWidth - this.width);
-			mouse.y = this.width - (boundingBox.bottom - 75 - event.clientY); // 75 is distance in px from bottom of canvas where cube is
-			// To change the distance, also make the same change in PotreeRenderer class in setViewport()
-
-			if(mouse.x < 0 || mouse.y > this.width) return;
-
-			mouse.x = (mouse.x / this.width) * 2 - 1;
-			mouse.y = -(mouse.y / this.width) * 2 + 1;
-
-			let raycaster = new THREE.Raycaster();
-			raycaster.setFromCamera(mouse, this.camera);
-			raycaster.ray.origin.sub(this.camera.getWorldDirection(new THREE.Vector3()));
-
-			let intersects = raycaster.intersectObjects(this.children);
-
+			
+			let intersects = onMouseMove(event)
 			let minDistance = 1000;
-			for (let i = 0; i < intersects.length; i++) {
-				if(intersects[i].distance < minDistance) {
-					this.pickedFace = intersects[i].object.name;
-					minDistance = intersects[i].distance;
+			if(intersects){
+				for (let i = 0; i < intersects.length; i++) {
+					if (intersects[i].distance < minDistance) {
+						this.pickedFace = intersects[i].object.name;
+						minDistance = intersects[i].distance;
+					}
+				}
+		
+				if (this.pickedFace) {
+					let bbox = this.fitToObject();
+					this.viewer.setView(this.pickedFace, bbox);
 				}
 			}
-			
-			if(this.pickedFace) {
-				let bbox = this.fitToObject();
-				this.viewer.setView(this.pickedFace, bbox);
-			}
 		};
-		
-		this.viewer.renderer.domElement.addEventListener('mousedown', onMouseDown, false);
+		this.viewer.renderer.domElement.addEventListener(
+		"mousemove",
+		onMouseMove,
+		false
+		);
+		this.viewer.renderer.domElement.addEventListener(
+		"mousedown",
+		onMouseDown,
+		false
+		);
 	}
 
 	update(rotation) {

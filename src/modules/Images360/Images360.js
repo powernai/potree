@@ -321,7 +321,7 @@ export class Images360 extends EventDispatcher{
 			if(i == 0 && this.cpmsRaycaster) {
 				// Check if this 360image set is behind anything else.
 				const raycast = this.cpmsRaycaster.castRay();
-				if(!raycast || raycast.object !== this)
+				if(!raycast || raycast.object !== this || viewer.navigationCube.hovered)
 					break;
 			}
 			let camera = viewer.getCamera(i);
