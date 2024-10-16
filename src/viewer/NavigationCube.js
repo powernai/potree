@@ -96,6 +96,10 @@ export class NavigationCube extends THREE.Object3D {
 		this.camera.rotation.order = "ZXY";
 
 		let onMouseMove = (event) => {
+			if (!this.visible || this.disable) {
+				this.hovered=false;
+				return ;
+			}
 			const boundingBox = this.domArea.getBoundingClientRect();
 			this.mouse.x = event.clientX - (window.innerWidth - this.width);
 			this.mouse.y = this.width - (boundingBox.bottom - 75 - event.clientY); // 75 is distance in px from bottom of canvas where cube is
