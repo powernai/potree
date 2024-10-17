@@ -355,7 +355,7 @@ export class OrientedImageLoader{
 			let selectionChanged = false;
 
 			//added images._visible to trigger that
-			if ( intersects.length > 0 && images._visible === true && correctScissor){
+			if ( intersects.length > 0 && images._visible === true && correctScissor && !viewer.navigationCube.hovered){
 				//console.log(intersects);
 				const intersection = intersects[0];
 				const orientedImage = intersection.object.orientedImage;
