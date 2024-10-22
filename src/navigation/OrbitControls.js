@@ -17,13 +17,12 @@ import * as THREE from "../../libs/three.js/build/three.module.js";
 import { MOUSE } from "../defines.js";
 import { Utils } from "../utils.js";
 import { EventDispatcher } from "../EventDispatcher.js";
-import { Vector3 } from "../../libs/three.js/build/three.module.js";
 
 export class OrbitControls extends EventDispatcher {
   constructor(
     viewer,
     scissorZoneIdxs = [0],
-    allowRotation = true,
+    allowedRotation = "all",
     cpmsRaycaster = null
   ) {
     super();
@@ -35,8 +34,10 @@ export class OrbitControls extends EventDispatcher {
     // OrbitControls listens to all scissorzone idxs in this array.
     // Maybe this could be changed to just listen to zones that have controls == this.
     this.scissorZoneIdxs = scissorZoneIdxs;
-    // allowRotation=false means that only horizontal mouse drag rotation is allowed, no vertical/scroll rotation.
-    this.allowRotation = allowRotation;
+    // allowedRotation="all" means that all three dimensions of rotation are allowed.
+    // otherwise, allowedRotation specifies the one dimension of rotation that is allowed,
+    // and it is always controlled by horizontal mouse drag.
+    this.allowedRotation = allowedRotation;
     this.cpmsRaycaster = cpmsRaycaster;
     this.sceneControls = new THREE.Scene();
 
@@ -80,7 +81,8 @@ export class OrbitControls extends EventDispatcher {
 
       if (e.drag.mouse === MOUSE.LEFT) {
         this.yawDelta += ndrag.x * this.rotationSpeed;
-        if (this.allowRotation) this.pitchDelta += ndrag.y * this.rotationSpeed;
+        if (this.allowedRotation === "all")
+          this.pitchDelta += ndrag.y * this.rotationSpeed;
 
         this.stopTweens();
       } else if (e.drag.mouse === MOUSE.RIGHT) {
@@ -99,9 +101,8 @@ export class OrbitControls extends EventDispatcher {
       if (!this.scissorZoneIdxs.includes(e.scissorZoneIdx)) return;
       // Added left click scroll for 3rd rotation axis.
       if (e.buttons === MOUSE.LEFT) {
-        if (!this.allowRotation) return;
-        // Rotation 3
-        this.rollDelta += e.delta * this.rotationSpeed * 0.05;
+        if (this.allowedRotation === "all")
+          this.rollDelta += e.delta * this.rotationSpeed * 0.05;
       }
       // Pan 3
       // No need to use current radius to scale the delta here. That occurs in translation handling later.
@@ -404,9 +405,23 @@ export class OrbitControls extends EventDispatcher {
         let roll = view.roll;
         let pivot = view.getPivot();
 
-        yaw -= progression * this.yawDelta;
-        pitch -= progression * this.pitchDelta;
-        roll -= progression * this.rollDelta;
+        switch(this.allowedRotation) {
+          case "all":
+            yaw -= progression * this.yawDelta;
+            pitch -= progression * this.pitchDelta;
+            roll -= progression * this.rollDelta;
+            break;
+          case "x":
+            // Pitch is restricted to [-PI/2, PI/2]. With the right camera orientation, yaw works instead. Use roll = PI/2 and pitch = -PI/2.
+            yaw -= progression * this.yawDelta;
+            break;
+          case "y":
+            roll -= progression * this.yawDelta;
+            break;
+          case "z":
+            yaw -= progression * this.yawDelta;
+            break;
+          }
 
         view.yaw = yaw;
         view.pitch = pitch;
