@@ -151,6 +151,64 @@ export class NavigationCube extends THREE.Object3D {
 		onMouseDown,
 		false
 		);
+
+		let onTouchMove = (event) => {
+			if (!this.visible || this.disable) {
+				this.hovered=false;
+				return ;
+			}
+			const boundingBox = this.domArea.getBoundingClientRect();
+			this.mouse.x = event.touches[0].clientX - (window.innerWidth - this.width);
+			this.mouse.y = this.width - (boundingBox.bottom - 75 - event.touches[0].clientY); // 75 is distance in px from bottom of canvas where cube is
+			// To change the distance, also make the same change in PotreeRenderer class in setViewport()
+			if (this.mouse.x < 0 || this.mouse.y > this.width) return;
+			
+			this.mouse.x = (this.mouse.x / this.width) * 2 - 1;
+			this.mouse.y = -(this.mouse.y / this.width) * 2 + 1;
+			
+			this.raycaster.setFromCamera(this.mouse, this.camera);
+			this.raycaster.ray.origin.sub(
+				this.camera.getWorldDirection(new Vector3())
+			);
+			
+			let intersects = this.raycaster.intersectObjects(this.children);
+			this.hovered=intersects.length ? true:false;
+			return intersects
+		};
+		let onTouchStart = (event) => {
+			if (!this.visible || this.disable) {
+				return ;
+			}
+
+			this.pickedFace = null;
+			
+			let intersects = onTouchMove(event);
+			let minDistance = 1000;
+			if(intersects){
+				for (let i = 0; i < intersects.length; i++) {
+					if (intersects[i].distance < minDistance) {
+						this.pickedFace = intersects[i].object.name;
+						minDistance = intersects[i].distance;
+					}
+				}
+		
+				if (this.pickedFace) {
+					let bbox = this.fitToObject();
+					this.viewer.setView(this.pickedFace, bbox);
+				}
+			}
+		};
+
+		this.viewer.renderer.domElement.addEventListener(
+		"touchmove",
+		onTouchMove,
+		false
+		);
+		this.viewer.renderer.domElement.addEventListener(
+		"touchstart",
+		onTouchStart,
+		false
+		);
 	}
 
 	update(rotation) {
