@@ -168,7 +168,7 @@ export class NavigationCube extends THREE.Object3D {
 			
 			this.raycaster.setFromCamera(this.mouse, this.camera);
 			this.raycaster.ray.origin.sub(
-				this.camera.getWorldDirection(new Vector3())
+				this.camera.getWorldDirection(new THREE.Vector3())
 			);
 			
 			let intersects = this.raycaster.intersectObjects(this.children);
