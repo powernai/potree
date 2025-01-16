@@ -208,7 +208,7 @@ export class Viewer extends EventDispatcher{
 				controls: null,
 				moveSpeed: 10,
 				viewIdxInScene:0,
-				outerBounds: { bottom: 0.70, left: 0.60, top: 1, right:1 },
+				outerBounds: { bottom: 0.70, left: 0.70, top: 1, right:1 },
 				scissorMode: "largestInside,topLeft",
 				id: "Fit Inspector Mini Canvas",
 				visible: false,
