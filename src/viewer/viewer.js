@@ -203,6 +203,16 @@ export class Viewer extends EventDispatcher{
 				id: "Street View Mini Canvas",
 				visible: false,
 			},
+			{
+				scene: null,
+				controls: null,
+				moveSpeed: 10,
+				viewIdxInScene:0,
+				outerBounds: { bottom: 0.70, left: 0.70, top: 1, right:1 },
+				scissorMode: "largestInside,topLeft",
+				id: "Fit Inspector Mini Canvas",
+				visible: false,
+			},
 		];
 
 		this.sceneVR = null;
@@ -271,7 +281,7 @@ export class Viewer extends EventDispatcher{
 		let scene = new Scene(this.renderer);
 		let scene2 = new Scene(this.renderer);
 		scene2.cameraMode = CameraMode.ORTHOGRAPHIC;
-		
+		let scene3 = new Scene(this.renderer);
 		{ // create VR scene
 			this.sceneVR = new THREE.Scene();
 
@@ -290,6 +300,7 @@ export class Viewer extends EventDispatcher{
 
 		this.setScene(scene, 0);
 		this.setScene(scene2, 1);
+		this.setScene(scene3, 2);
 
 		{
 			this.inputHandler = new InputHandler(this);
@@ -349,6 +360,7 @@ export class Viewer extends EventDispatcher{
 			this.setFreeze(false);
 			this.setControls(this.orbitControls, 0);
 			this.setControls(this.orbitControls2, 1);
+			this.setControls(this.orbitControls3, 2);
 			this.setBackground('gradient');
 
 			this.scaleFactor = 1;
@@ -1292,7 +1304,12 @@ export class Viewer extends EventDispatcher{
 			this.orbitControls2.addEventListener('start', this.disableAnnotations.bind(this));
 			this.orbitControls2.addEventListener('end', this.enableAnnotations.bind(this));
 		}
-
+		{ // create ORBIT CONTROLS
+			this.orbitControls3 = new OrbitControls(this, [2], "all", this.cpmsRaycaster);
+			this.orbitControls3.enabled = false;
+			this.orbitControls3.addEventListener('start', this.disableAnnotations.bind(this));
+			this.orbitControls3.addEventListener('end', this.enableAnnotations.bind(this));
+		}
 		{ // create EARTH CONTROLS
 			this.earthControls = new EarthControls(this);
 			this.earthControls.enabled = false;
