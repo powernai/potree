@@ -119,7 +119,7 @@ export class OrbitControls extends EventDispatcher {
       ) {
         // Make sure pointcloud is not behind anything.
         if (cpmsRaycaster) {
-          const raycast = cpmsRaycaster.castRay();
+          const raycast = cpmsRaycaster.castRay(undefined, "db");
           if (
             !raycast ||
             !raycast.object ||
