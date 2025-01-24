@@ -100,7 +100,7 @@ export class InputHandler extends EventDispatcher {
 
 			// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the touch.
 			for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-				if (!this.viewer.scissorZones[i].visible) continue;
+				if (!this.viewer.getScissorVisible(i)) continue;
 				const scissor = this.viewer.getScissor(i);
 				if (
 					x >= scissor.x &&
@@ -139,7 +139,7 @@ export class InputHandler extends EventDispatcher {
 
 		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the touch.
 		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-			if (!this.viewer.scissorZones[i].visible) continue;
+			if (!this.viewer.getScissorVisible(i)) continue;
 			const scissor = this.viewer.getScissor(i);
 			if (
 				x >= scissor.x &&
@@ -189,7 +189,7 @@ export class InputHandler extends EventDispatcher {
 	
 			// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the touch.
 			for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-				if (!this.viewer.scissorZones[i].visible) continue;
+				if (!this.viewer.getScissorVisible(i)) continue;
 				const scissor = this.viewer.getScissor(i);
 				if (
 					x >= scissor.x &&
@@ -295,7 +295,7 @@ export class InputHandler extends EventDispatcher {
 		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the doubleclick.
 		let i;
 		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-			if (!this.viewer.scissorZones[i].visible) continue;
+			if (!this.viewer.getScissorVisible(i)) continue;
 			const scissor = this.viewer.getScissor(i);
 			if (
 				x >= scissor.x &&
@@ -355,7 +355,7 @@ export class InputHandler extends EventDispatcher {
 		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the click.
 		let i;
 		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-			if (!this.viewer.scissorZones[i].visible) continue;
+			if (!this.viewer.getScissorVisible(i)) continue;
 			const scissor = this.viewer.getScissor(i);
 			if (
 				x >= scissor.x &&
@@ -627,7 +627,7 @@ export class InputHandler extends EventDispatcher {
 		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the scroll.
 		let i;
 		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-			if (!this.viewer.scissorZones[i].visible) continue;
+			if (!this.viewer.getScissorVisible(i)) continue;
 			const scissor = this.viewer.getScissor(i);
 			if (
 				x >= scissor.x &&
@@ -792,7 +792,7 @@ export class InputHandler extends EventDispatcher {
 	getHoveredElements () {
 		let intersections = [];
 		for (let i = 0; i < this.viewer.scissorZones.length; i++) {
-			if (!this.viewer.scissorZones[i].visible) continue;
+			if (!this.viewer.getScissorVisible(i)) continue;
 			let scenes = this.interactiveScenes.concat(
 				this.viewer.scissorZones[i].scene.scene
 			);
