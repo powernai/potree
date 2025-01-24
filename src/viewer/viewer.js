@@ -83,25 +83,19 @@ export class Viewer extends EventDispatcher{
 
 			const minMinicanvasSize = "5px";
 
-			let topLeftResizable = $(domElement).find('#top_left_resizable')[0];
-			if (!topLeftResizable) {
+			if ($(domElement).find('#top_left_resizable').length === 0) {
 				// "display: none" makes it initially invisible
 				// width and height are only the initial values
-				topLeftResizable = $(`
-					<div id="top_left_resizable" class="top_left_resizable"
-						style="position: absolute; border: 2px solid; z-index: 100001; box-sizing: border-box;
-						padding: ${minMinicanvasSize}; display: none; width: 25%; height: 45%;"
-					></div>`)
+				let topLeftResizable = $(`
+					<div id="top_left_resizable" class="top_left_resizable" style="position: absolute; border: 2px solid; box-sizing: border-box;
+						z-index: 100001; padding: ${minMinicanvasSize}; display: none; width: 25%; height: 45%;"></div>`)
 				$(domElement).append(topLeftResizable);
 			}
 
-			let topRightResizable = $(domElement).find('#top_right_resizable')[0];
-			if (!topRightResizable) {
-				topRightResizable = $(`
-					<div id="top_right_resizable" class="top_right_resizable"
-						style="position: absolute; border: 2px solid; z-index: 100001; box-sizing: border-box;
-						padding: ${minMinicanvasSize}; display: none; width: 30%; height: 30%; direction: rtl; right: 0;"
-					></div>`)
+			if ($(domElement).find('#top_right_resizable').length === 0) {
+				let topRightResizable = $(`
+					<div id="top_right_resizable" class="top_right_resizable" style="position: absolute; border: 2px solid; box-sizing: border-box;
+						z-index: 100001; padding: ${minMinicanvasSize}; display: none; width: 30%; height: 30%; direction: rtl; right: 0;"></div>`)
 				$(domElement).append(topRightResizable);
 			}
 
@@ -212,7 +206,6 @@ export class Viewer extends EventDispatcher{
 				viewIdxInScene: 0,
 				scissorMode: "exact",
 				id: "Main Canvas",
-				domElement: this.renderer.domElement,
 			},
 			{
 				scene: null,
@@ -221,7 +214,6 @@ export class Viewer extends EventDispatcher{
 				viewIdxInScene: 0,
 				scissorMode: "largestInside,topLeft",
 				id: "Street View Mini Canvas",
-				domElement: topLeftResizable,
 			},
 			{
 				scene: null,
@@ -230,7 +222,6 @@ export class Viewer extends EventDispatcher{
 				viewIdxInScene:0,
 				scissorMode: "largestInside,topLeft",
 				id: "Fit Inspector Mini Canvas",
-				domElement: topRightResizable,
 			},
 		];
 
@@ -250,6 +241,10 @@ export class Viewer extends EventDispatcher{
 		this.background = null;
 
 		this.initThree();
+
+		this.scissorZones[0].domElement = this.renderer.domElement;
+		this.scissorZones[1].domElement = $(domElement).find('#top_left_resizable')[0];
+		this.scissorZones[2].domElement = $(domElement).find('#top_right_resizable')[0];
 
 		if(args.noDragAndDrop){
 			
