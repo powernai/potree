@@ -226,7 +226,7 @@ export class OrbitControls extends EventDispatcher {
     let camera;
     let view;
     for (let i = 0; i < this.scissorZoneIdxs.length; i++) {
-      if (!this.viewer.scissorZones[this.scissorZoneIdxs[i]].visible) continue;
+      if (!this.viewer.getScissorVisible(this.scissorZoneIdxs[i])) continue;
       camera = this.viewer.getCamera(this.scissorZoneIdxs[i]);
       view = this.viewer.getView(this.scissorZoneIdxs[i]);
     }
@@ -294,7 +294,7 @@ export class OrbitControls extends EventDispatcher {
     let I;
     let i;
     for (i = 0; i < this.scissorZoneIdxs.length; i++) {
-      if (!this.viewer.scissorZones[this.scissorZoneIdxs[i]].visible) continue;
+      if (!this.viewer.getScissorVisible(this.scissorZoneIdxs[i])) continue;
       camera = this.viewer.getCamera(this.scissorZoneIdxs[i]);
 
       I = Utils.getMousePointCloudIntersection(

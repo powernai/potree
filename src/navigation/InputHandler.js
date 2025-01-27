@@ -42,19 +42,21 @@ export class InputHandler extends EventDispatcher {
 			this.domElement.tabIndex = 2222;
 		}
 
-		this.domElement.addEventListener('contextmenu', (event) => { event.preventDefault(); }, false);
-		this.domElement.addEventListener('click', this.onMouseClick.bind(this), false);
-		this.domElement.addEventListener('mousedown', this.onMouseDown.bind(this), false);
-		this.domElement.addEventListener('mouseup', this.onMouseUp.bind(this), false);
-		this.domElement.addEventListener('mousemove', this.onMouseMove.bind(this), false);
-		this.domElement.addEventListener('mousewheel', this.onMouseWheel.bind(this), false);
-		this.domElement.addEventListener('DOMMouseScroll', this.onMouseWheel.bind(this), false); // Firefox
-		this.domElement.addEventListener('dblclick', this.onDoubleClick.bind(this));
-		this.domElement.addEventListener('keydown', this.onKeyDown.bind(this));
-		this.domElement.addEventListener('keyup', this.onKeyUp.bind(this));
-		this.domElement.addEventListener('touchstart', this.onTouchStart.bind(this));
-		this.domElement.addEventListener('touchend', this.onTouchEnd.bind(this));
-		this.domElement.addEventListener('touchmove', this.onTouchMove.bind(this));
+		viewer.scissorZones.forEach((zone, i) => {
+			zone.domElement.addEventListener('contextmenu', (event) => { event.preventDefault(); }, false);
+			zone.domElement.addEventListener('click', this.onMouseClick.bind(this), false);
+			zone.domElement.addEventListener('mousedown', this.onMouseDown.bind(this), false);
+			zone.domElement.addEventListener('mouseup', this.onMouseUp.bind(this), false);
+			zone.domElement.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+			zone.domElement.addEventListener('mousewheel', this.onMouseWheel.bind(this), false);
+			zone.domElement.addEventListener('DOMMouseScroll', this.onMouseWheel.bind(this), false); // Firefox
+			zone.domElement.addEventListener('dblclick', this.onDoubleClick.bind(this));
+			zone.domElement.addEventListener('keydown', this.onKeyDown.bind(this));
+			zone.domElement.addEventListener('keyup', this.onKeyUp.bind(this));
+			zone.domElement.addEventListener('touchstart', this.onTouchStart.bind(this));
+			zone.domElement.addEventListener('touchend', this.onTouchEnd.bind(this));
+			zone.domElement.addEventListener('touchmove', this.onTouchMove.bind(this));
+		})
 	}
 	get scene() {
 		if (this.sceneArray.length > 0) return this.sceneArray[0];
@@ -100,7 +102,7 @@ export class InputHandler extends EventDispatcher {
 
 			// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the touch.
 			for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-				if (!this.viewer.scissorZones[i].visible) continue;
+				if (!this.viewer.getScissorVisible(i)) continue;
 				const scissor = this.viewer.getScissor(i);
 				if (
 					x >= scissor.x &&
@@ -139,7 +141,7 @@ export class InputHandler extends EventDispatcher {
 
 		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the touch.
 		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-			if (!this.viewer.scissorZones[i].visible) continue;
+			if (!this.viewer.getScissorVisible(i)) continue;
 			const scissor = this.viewer.getScissor(i);
 			if (
 				x >= scissor.x &&
@@ -189,7 +191,7 @@ export class InputHandler extends EventDispatcher {
 	
 			// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the touch.
 			for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-				if (!this.viewer.scissorZones[i].visible) continue;
+				if (!this.viewer.getScissorVisible(i)) continue;
 				const scissor = this.viewer.getScissor(i);
 				if (
 					x >= scissor.x &&
@@ -295,7 +297,7 @@ export class InputHandler extends EventDispatcher {
 		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the doubleclick.
 		let i;
 		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-			if (!this.viewer.scissorZones[i].visible) continue;
+			if (!this.viewer.getScissorVisible(i)) continue;
 			const scissor = this.viewer.getScissor(i);
 			if (
 				x >= scissor.x &&
@@ -355,7 +357,7 @@ export class InputHandler extends EventDispatcher {
 		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the click.
 		let i;
 		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-			if (!this.viewer.scissorZones[i].visible) continue;
+			if (!this.viewer.getScissorVisible(i)) continue;
 			const scissor = this.viewer.getScissor(i);
 			if (
 				x >= scissor.x &&
@@ -627,7 +629,7 @@ export class InputHandler extends EventDispatcher {
 		// Backwards loop so if two canvases are overlapping, the last rendered one (the one on top) catches the scroll.
 		let i;
 		for (i = this.viewer.scissorZones.length - 1; i >= 0; i--) {
-			if (!this.viewer.scissorZones[i].visible) continue;
+			if (!this.viewer.getScissorVisible(i)) continue;
 			const scissor = this.viewer.getScissor(i);
 			if (
 				x >= scissor.x &&
@@ -792,7 +794,7 @@ export class InputHandler extends EventDispatcher {
 	getHoveredElements () {
 		let intersections = [];
 		for (let i = 0; i < this.viewer.scissorZones.length; i++) {
-			if (!this.viewer.scissorZones[i].visible) continue;
+			if (!this.viewer.getScissorVisible(i)) continue;
 			let scenes = this.interactiveScenes.concat(
 				this.viewer.scissorZones[i].scene.scene
 			);

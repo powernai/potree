@@ -81,6 +81,24 @@ export class Viewer extends EventDispatcher{
 				$(domElement).append(potreeAnnotationContainer);
 			}
 
+			const minMinicanvasSize = "5px";
+
+			if ($(domElement).find('#top_left_resizable').length === 0) {
+				// "display: none" makes it initially invisible
+				// width and height are only the initial values
+				let topLeftResizable = $(`
+					<div id="top_left_resizable" class="top_left_resizable" style="position: absolute; border: 2px solid; box-sizing: border-box;
+						z-index: 100001; padding: ${minMinicanvasSize}; display: none; width: 25%; height: 45%;"></div>`)
+				$(domElement).append(topLeftResizable);
+			}
+
+			if ($(domElement).find('#top_right_resizable').length === 0) {
+				let topRightResizable = $(`
+					<div id="top_right_resizable" class="top_right_resizable" style="position: absolute; border: 2px solid; box-sizing: border-box;
+						z-index: 100001; padding: ${minMinicanvasSize}; display: none; width: 30%; height: 30%; direction: rtl; right: 0;"></div>`)
+				$(domElement).append(topRightResizable);
+			}
+
 			if ($(domElement).find('#potree_quick_buttons').length === 0) {
 				let potreeMap = $(`
 					<div id="potree_quick_buttons" class="quick_buttons_container" style="">
@@ -171,13 +189,11 @@ export class Viewer extends EventDispatcher{
 
 		If you want the two mini canvases to move in sync but view different scenes,
 		set their controls to be the same.
-		
-		outerBounds is expressed as a fraction of the canvas, with 0 being the bottom or left and 1 being the top or right.
 
-		For "exact" scissorMode, viewport and scissor will equal outerBounds. 
+		For "exact" scissorMode, scissor will equal the viewport. 
 		For "largestInside,topLeft" mode, if there is no background image, it uses "exact" mode, but if there is an image,
-		viewport will equal outerBounds and scissor will be the largest possible rectangle that fits inside outerBounds
-		while having the same aspect ratio as the original background image, placed in the top left corner of outerBounds.
+		scissor will be the largest possible rectangle that fits inside the viewport while having the same aspect ratio
+		as the original background image, placed in the top left corner of the viewport.
 
 		The view of the scene is stretched/shrunk to fit the viewport, then cut to only display on the scissor.
 		The background image is instead stretched/shrunk to fit the scissor and cut to only display on the viewport.
@@ -188,30 +204,24 @@ export class Viewer extends EventDispatcher{
 				controls: null,
 				moveSpeed: 10,
 				viewIdxInScene: 0,
-				outerBounds: { bottom: 0, left: 0, top: 1, right: 1 },
 				scissorMode: "exact",
 				id: "Main Canvas",
-				visible: true,
 			},
 			{
 				scene: null,
 				controls: null,
 				moveSpeed: 10,
 				viewIdxInScene: 0,
-				outerBounds: { bottom: 0.55, left: 0, top: 1, right: 0.25 },
 				scissorMode: "largestInside,topLeft",
 				id: "Street View Mini Canvas",
-				visible: false,
 			},
 			{
 				scene: null,
 				controls: null,
 				moveSpeed: 10,
 				viewIdxInScene:0,
-				outerBounds: { bottom: 0.70, left: 0.70, top: 1, right:1 },
 				scissorMode: "largestInside,topLeft",
 				id: "Fit Inspector Mini Canvas",
-				visible: false,
 			},
 		];
 
@@ -231,6 +241,10 @@ export class Viewer extends EventDispatcher{
 		this.background = null;
 
 		this.initThree();
+
+		this.scissorZones[0].domElement = this.renderer.domElement;
+		this.scissorZones[1].domElement = $(domElement).find('#top_left_resizable')[0];
+		this.scissorZones[2].domElement = $(domElement).find('#top_right_resizable')[0];
 
 		if(args.noDragAndDrop){
 			
@@ -493,17 +507,28 @@ export class Viewer extends EventDispatcher{
 		}
 	}
 	getViewport(idx) {
-		const zone = this.scissorZones[idx];
-
 		const canvasWidth = this.renderArea.clientWidth;
 		const canvasHeight = this.renderArea.clientHeight;
 
-		return new THREE.Vector4(
-			zone.outerBounds.left * canvasWidth,
-			zone.outerBounds.bottom * canvasHeight,
-			(zone.outerBounds.right - zone.outerBounds.left) * canvasWidth,
-			(zone.outerBounds.top - zone.outerBounds.bottom) * canvasHeight,
-		);
+		if(idx === 1) {
+			const domElement = this.scissorZones[1].domElement;
+			if(domElement)
+				return new THREE.Vector4(0, canvasHeight - domElement.clientHeight, domElement.clientWidth, domElement.clientHeight)
+		} else if(idx === 2) {
+			const domElement = this.scissorZones[2].domElement;
+			if(domElement)
+				return new THREE.Vector4(canvasWidth - domElement.clientWidth, canvasHeight - domElement.clientHeight, domElement.clientWidth, domElement.clientHeight)
+		}
+		return new THREE.Vector4(0, 0, canvasWidth, canvasHeight);
+	}
+	getScissorVisible(idx) {
+		const domElement = this.scissorZones[idx].domElement;
+		return !!domElement && domElement.style.display !== "none";
+	}
+	setScissorVisible(idx, visibility = true) {
+		const domElement = this.scissorZones[idx].domElement;
+		if(domElement)
+			domElement.style.display = visibility ? "block" : "none";
 	}
 
 	// ------------------------------------------------------------------------------------
@@ -2280,14 +2305,14 @@ export class Viewer extends EventDispatcher{
 		this.renderer.clear();
 
 		for (let scissorZoneIdx = 0; scissorZoneIdx < this.scissorZones.length; scissorZoneIdx++) {
-			const zone = this.scissorZones[scissorZoneIdx];
-			if(!zone.visible)
+			if(!this.getScissorVisible(scissorZoneIdx))
 				continue;
-
+			
 			const scissor = this.getScissor(scissorZoneIdx);
 			if(!scissor.height > 0 || !scissor.width > 0)
 				continue;
 
+			const zone = this.scissorZones[scissorZoneIdx];
 			const scene = zone.scene;
 
 			// Camera viewport sizing
