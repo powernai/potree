@@ -60,7 +60,7 @@ export class OrbitControls extends EventDispatcher {
 
     this.tweens = [];
 
-    let drag = (e) => {
+    this.drag = (e) => {
       if (
         e.drag.object !== null ||
         !this.scissorZoneIdxs.includes(e.drag.scissorZoneIdx)
@@ -93,11 +93,11 @@ export class OrbitControls extends EventDispatcher {
       }
     };
 
-    let drop = (e) => {
+    this.drop = (e) => {
       this.dispatchEvent({ type: "end" });
     };
 
-    let scroll = (e) => {
+    this.scroll = (e) => {
       if (!this.scissorZoneIdxs.includes(e.scissorZoneIdx)) return;
       // Added left click scroll for 3rd rotation axis.
       if (e.buttons === MOUSE.LEFT) {
@@ -112,7 +112,7 @@ export class OrbitControls extends EventDispatcher {
       this.dispatchEvent({ type: "end" });
     };
 
-    let dblclick = (e) => {
+    this.dblclick = (e) => {
       if (
         this.scissorZoneIdxs.includes(e.scissorZoneIdx) &&
         this.doubleClockZoomEnabled
@@ -135,15 +135,15 @@ export class OrbitControls extends EventDispatcher {
     };
 
     let previousTouch = null;
-    let touchStart = (e) => {
+    this.touchStart = (e) => {
       previousTouch = e;
     };
 
-    let touchEnd = (e) => {
+    this.touchEnd = (e) => {
       previousTouch = e;
     };
 
-    let touchMove = (e) => {
+    this.touchMove = (e) => {
       if (e.touches.length === 2 && previousTouch.touches.length === 2) {
         let prev = previousTouch;
         let curr = e;
@@ -202,13 +202,13 @@ export class OrbitControls extends EventDispatcher {
       previousTouch = e;
     };
 
-    this.addEventListener("touchstart", touchStart);
-    this.addEventListener("touchend", touchEnd);
-    this.addEventListener("touchmove", touchMove);
-    this.addEventListener("drag", drag);
-    this.addEventListener("drop", drop);
-    this.addEventListener("mousewheel", scroll);
-    this.addEventListener("dblclick", dblclick);
+    this.addEventListener("touchstart", this.touchStart);
+    this.addEventListener("touchend", this.touchEnd);
+    this.addEventListener("touchmove", this.touchMove);
+    this.addEventListener("drag", this.drag);
+    this.addEventListener("drop", this.drop);
+    this.addEventListener("mousewheel", this.scroll);
+    this.addEventListener("dblclick", this.dblclick);
   }
 
   setScene(scene) {
@@ -221,7 +221,24 @@ export class OrbitControls extends EventDispatcher {
     this.rollDelta = 0;
     this.translationDelta.set(0, 0, 0);
   }
-
+  disableListeners() {
+    this.removeEventListener("touchstart", this.touchStart);
+    this.removeEventListener("touchend", this.touchEnd);
+    this.removeEventListener("touchmove", this.touchMove);
+    this.removeEventListener("drag", this.drag);
+    this.removeEventListener("drop", this.drop);
+    this.removeEventListener("mousewheel", this.scroll);
+    this.removeEventListener("dblclick", this.dblclick);
+  }
+  enableListeners() {
+    this.addEventListener("touchstart", this.touchStart);
+    this.addEventListener("touchend", this.touchEnd);
+    this.addEventListener("touchmove", this.touchMove);
+    this.addEventListener("drag", this.drag);
+    this.addEventListener("drop", this.drop);
+    this.addEventListener("mousewheel", this.scroll);
+    this.addEventListener("dblclick", this.dblclick);
+  }
   zoomToBIM(boundingBox) {
     let camera;
     let view;
@@ -405,7 +422,7 @@ export class OrbitControls extends EventDispatcher {
         let roll = view.roll;
         let pivot = view.getPivot();
 
-        switch(this.allowedRotation) {
+        switch (this.allowedRotation) {
           case "all":
             yaw -= progression * this.yawDelta;
             pitch -= progression * this.pitchDelta;
@@ -421,7 +438,7 @@ export class OrbitControls extends EventDispatcher {
           case "z":
             yaw -= progression * this.yawDelta;
             break;
-          }
+        }
 
         view.yaw = yaw;
         view.pitch = pitch;
