@@ -39,7 +39,7 @@ class Image360{
 		this.pitch = pitch;
 		this.roll = roll;
 		this.mesh = null;
-		this.annotations= [];
+		this.markers= [];
 	}
 };
 
