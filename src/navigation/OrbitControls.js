@@ -145,8 +145,6 @@ export class OrbitControls extends EventDispatcher {
 
     this.touchMove = (e) => {
 	  if (!this.scissorZoneIdxs.includes(e.scissorZoneIdx)) {
-		console.debug(this.scissorZoneIdxs);
-		console.debug(e.scissorZoneIdx);
 		return;
 	  }
       if (e.touches.length === 2 && previousTouch.touches.length === 2) {
