@@ -162,7 +162,7 @@ export class OrbitControls extends EventDispatcher {
         // Added div by 0 check
         if (prevDist != 0)
           // No need to use current radius to scale the delta here. That occurs in translation handling later.
-          this.translationDelta.y -= currDist / prevDist - 1;
+          this.translationDelta.y += currDist / prevDist - 1;
 
         this.stopTweens();
       } else if (e.touches.length === 3 && previousTouch.touches.length === 3) {
