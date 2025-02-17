@@ -102,7 +102,7 @@ export class InputHandler extends EventDispatcher {
 			if (!this.viewer.getScissorVisible(i)) continue;
 			const scissor = this.viewer.getScissor(i);
 			scissorIdx = i;
-			if (i === 1) print(`START: ${x} <= ${scissor.width} AND ${y} <= ${scissor.height}`);
+			if (i === 1) console.debug(`START: ${x} <= ${scissor.width} AND ${y} <= ${scissor.height}`);
 			if (
 				x <= scissor.width &&
 				y <= scissor.height
@@ -227,7 +227,7 @@ export class InputHandler extends EventDispatcher {
 			if (!this.viewer.getScissorVisible(i)) continue;
 			const scissor = this.viewer.getScissor(i);
 			scissorIdx = i;
-			if (i === 1) print(`MOVE: ${x} <= ${scissor.width} AND ${y} <= ${scissor.height}`);
+			if (i === 1) console.debug(`MOVE: ${x} <= ${scissor.width} AND ${y} <= ${scissor.height}`);
 			if (
 				x <= scissor.width &&
 				y <= scissor.height
