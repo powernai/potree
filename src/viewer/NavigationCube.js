@@ -101,7 +101,7 @@ export class NavigationCube extends THREE.Object3D {
 				return ;
 			}
 			const boundingBox = this.domArea.getBoundingClientRect();
-			this.mouse.x = event.clientX - (window.innerWidth - this.width);
+			this.mouse.x = event.clientX - (boundingBox.right - this.width);
 			this.mouse.y = this.width - (boundingBox.bottom - 75 - event.clientY); // 75 is distance in px from bottom of canvas where cube is
 			// To change the distance, also make the same change in PotreeRenderer class in setViewport()
 			if (this.mouse.x < 0 || this.mouse.y > this.width) return;
@@ -158,7 +158,7 @@ export class NavigationCube extends THREE.Object3D {
 				return ;
 			}
 			const boundingBox = this.domArea.getBoundingClientRect();
-			this.mouse.x = event.touches[0].clientX - (window.innerWidth - this.width);
+			this.mouse.x = event.touches[0].clientX - (boundingBox.right- this.width);
 			this.mouse.y = this.width - (boundingBox.bottom - 75 - event.touches[0].clientY); // 75 is distance in px from bottom of canvas where cube is
 			// To change the distance, also make the same change in PotreeRenderer class in setViewport()
 			if (this.mouse.x < 0 || this.mouse.y > this.width) return;
