@@ -123,7 +123,7 @@ export class InputHandler extends EventDispatcher {
 			if (target) {
 				target.object.material.emissive.setHex(0x888888);
 				this.lastTarget = target;
-				this.startDragging(target.object, {location: target.point}, i);
+				this.startDragging(target.object, {location: target.point}, scissorIdx);
 			} else {
 				if (this.lastTarget) {
 					this.lastTarget.object.material.emissive.setHex(0x000000);
