@@ -30,6 +30,7 @@ export class InputHandler extends EventDispatcher {
 		this.selection = [];
 
 		this.hoveredElements = [];
+		this.lastTarget = null;
 		this.pressedKeys = {};
 
 		this.wheelDelta = 0;
@@ -111,37 +112,56 @@ export class InputHandler extends EventDispatcher {
 
 		if (e.touches.length === 1) {
 			this.startDragging(null, null, scissorIdx);
+			this.hoveredElements = this.getHoveredElements();
 
-			if (this.drag) {
-				this.drag.mouse = e.buttons;
+			let target = this.hoveredElements
+				.find(el => (
+					el.object._listeners &&
+					el.object._listeners['drag'] &&
+					el.object._listeners['drag'].length > 0));
 
-				this.drag.lastDrag.x = x - this.drag.end.x;
-				this.drag.lastDrag.y = y - this.drag.end.y;
+			if (target) {
+				target.object.material.emissive.setHex(0x888888);
+				this.lastTarget = target;
+				this.startDragging(target.object, {location: target.point}, i);
+			} else {
+				if (this.lastTarget) {
+					this.lastTarget.object.material.emissive.setHex(0x000000);
+					this.lastTarget = null;
+				}
+				this.startDragging(null, null, scissorIdx);
 
-				this.drag.end.set(x, y);
+				if (this.drag) {
+					this.drag.mouse = e.buttons;
 
-				if (this.drag.object) {
-					if (this.logMessages) console.log(this.constructor.name + ': drag: ' + this.drag.object.name);
-					this.drag.object.dispatchEvent({
-						type: 'drag',
-						drag: this.drag,
-						viewer: this.viewer,
-						mouse: this.mouse,
-					});
-				} else {
-					if (this.logMessages) console.log(this.constructor.name + ': drag: ');
+					this.drag.lastDrag.x = x - this.drag.end.x;
+					this.drag.lastDrag.y = y - this.drag.end.y;
 
-					let dragConsumed = false;
-					for (let inputListener of this.getSortedListeners()) {
-						inputListener.dispatchEvent({
+					this.drag.end.set(x, y);
+
+					if (this.drag.object) {
+						if (this.logMessages) console.log(this.constructor.name + ': drag: ' + this.drag.object.name);
+						this.drag.object.dispatchEvent({
 							type: 'drag',
 							drag: this.drag,
 							viewer: this.viewer,
-							consume: () => {dragConsumed = true;}
+							mouse: this.mouse,
 						});
+					} else {
+						if (this.logMessages) console.log(this.constructor.name + ': drag: ');
 
-						if(dragConsumed){
-							break;
+						let dragConsumed = false;
+						for (let inputListener of this.getSortedListeners()) {
+							inputListener.dispatchEvent({
+								type: 'drag',
+								drag: this.drag,
+								viewer: this.viewer,
+								consume: () => {dragConsumed = true;}
+							});
+
+							if(dragConsumed){
+								break;
+							}
 						}
 					}
 				}
@@ -185,14 +205,29 @@ export class InputHandler extends EventDispatcher {
 				break;
 		}
 
-		for (let inputListener of this.getSortedListeners()) {
-			inputListener.dispatchEvent({
+		// for (let inputListener of this.getSortedListeners()) {
+		// 	inputListener.dispatchEvent({
+		// 		type: 'drop',
+		// 		drag: this.drag,
+		// 		viewer: this.viewer,
+		// 		scissorZoneIdx: scissorIdx,
+		// 		mouse: this.mouse,
+		// 	});
+		// }
+
+		if (this.drag.object) {
+			if (this.logMessages) console.log(`${this.constructor.name}: drop ${this.drag.object.name}`);
+			this.drag.object.dispatchEvent({
 				type: 'drop',
 				drag: this.drag,
 				viewer: this.viewer,
-				scissorZoneIdx: scissorIdx,
+				scissorZoneIdx: this.drag.scissorZoneIdx,
 				mouse: this.mouse,
 			});
+			if (this.lastTarget) {
+				this.lastTarget.object.material.emissive.setHex(0x000000);
+				this.lastTarget = null;
+			}
 		}
 
 		this.drag = null;
@@ -235,7 +270,14 @@ export class InputHandler extends EventDispatcher {
 
 		if (e.touches.length === 1) {
 
-			if (this.drag) {
+			if (this.drag.object) {
+					if (this.logMessages) console.log(this.constructor.name + ': drag: ' + this.drag.object.name);
+					this.drag.object.dispatchEvent({
+						type: 'drag',
+						drag: this.drag,
+						viewer: this.viewer
+					});
+			} else if (this.drag) {
 				this.drag.mouse = 1;
 
 				this.drag.lastDrag.x = x - this.drag.end.x;
@@ -832,7 +874,9 @@ export class InputHandler extends EventDispatcher {
 				this.viewer.scissorZones[i].scene.scene
 			);
 
-			let interactableListeners = ['mouseup', 'mousemove', 'mouseover', 'mouseleave', 'drag', 'drop', 'click', 'select', 'deselect'];
+			let interactableListeners = ['mouseup', 'mousemove', 'mouseover', 'mouseleave', 
+										'touchstart', 'touchend', 'touchmove',
+										'drag', 'drop', 'click', 'select', 'deselect'];
 			let interactables = [];
 			for (let scene of scenes) {
 				scene.traverseVisible(node => {
