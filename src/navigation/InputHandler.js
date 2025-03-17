@@ -271,12 +271,19 @@ export class InputHandler extends EventDispatcher {
 		if (e.touches.length === 1) {
 
 			if (this.drag.object) {
-					if (this.logMessages) console.log(this.constructor.name + ': drag: ' + this.drag.object.name);
-					this.drag.object.dispatchEvent({
-						type: 'drag',
-						drag: this.drag,
-						viewer: this.viewer
-					});
+				this.drag.mouse = 1;
+
+				this.drag.lastDrag.x = x - this.drag.end.x;
+				this.drag.lastDrag.y = y - this.drag.end.y;
+
+				this.drag.end.set(x, y);
+
+				if (this.logMessages) console.log(this.constructor.name + ': drag: ' + this.drag.object.name);
+				this.drag.object.dispatchEvent({
+					type: 'drag',
+					drag: this.drag,
+					viewer: this.viewer
+				});
 			} else if (this.drag) {
 				this.drag.mouse = 1;
 
