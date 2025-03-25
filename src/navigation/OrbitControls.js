@@ -60,6 +60,8 @@ export class OrbitControls extends EventDispatcher {
 
     this.tweens = [];
 
+	this.enabled =true;
+
     this.drag = (e) => {
       if (
         e.drag.object !== null ||
@@ -232,6 +234,7 @@ export class OrbitControls extends EventDispatcher {
     this.removeEventListener("drop", this.drop);
     this.removeEventListener("mousewheel", this.scroll);
     this.removeEventListener("dblclick", this.dblclick);
+	this.enabled=false;
   }
   enableListeners() {
     this.addEventListener("touchstart", this.touchStart);
@@ -241,6 +244,7 @@ export class OrbitControls extends EventDispatcher {
     this.addEventListener("drop", this.drop);
     this.addEventListener("mousewheel", this.scroll);
     this.addEventListener("dblclick", this.dblclick);
+	this.enabled=true;
   }
   zoomToBIM(boundingBox) {
     let camera;
