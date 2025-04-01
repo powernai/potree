@@ -352,7 +352,7 @@ export class Measure extends THREE.Object3D {
 		return sphereMaterial;
 	};
 
-	addMarker (point, rayCastPosition = () => {return null}) {
+	addMarker (point, rayCastPosition = () => {return null}, doNormalIntersections = true) {
 		if (point.x != null) {
 			point = {position: point};
 		}else if(point instanceof Array){
@@ -425,35 +425,37 @@ export class Measure extends THREE.Object3D {
 
 		{ // Event Listeners
 			let drag = async (e) => {
-				let I = Utils.getMousePointCloudIntersection(
-					e.drag.end, 
-					e.viewer.scene.getActiveCamera(), 
-					e.viewer, 
-					e.viewer.scene.pointclouds,
-					{pickClipped: true});
-
 				let location = await rayCastPosition();
-				if (I) {
+				if (location) {
 					let i = this.spheres.indexOf(e.drag.object);
 					if (i !== -1) {
-						let point = this.points[i];
-						
-						// loop through current keys and cleanup ones that will be orphaned
-						for (let key of Object.keys(point)) {
-							if (!I.point[key]) {
-								delete point[key];
-							}
-						}
-
-						for (let key of Object.keys(I.point).filter(e => e !== 'position')) {
-							point[key] = I.point[key];
-						}
-						this.setPosition(i, I.location)
+						this.setPosition(i, location);
 					}
-				}
-				let i = this.spheres.indexOf(e.drag.object);
-				if ( i !== -1 && location) {
-					this.setPosition(i, location);
+				} else if (doNormalIntersections) {
+					let I = Utils.getMousePointCloudIntersection(
+						e.drag.end, 
+						e.viewer.scene.getActiveCamera(), 
+						e.viewer, 
+						e.viewer.scene.pointclouds,
+						{pickClipped: true});
+					if (I) {
+						let i = this.spheres.indexOf(e.drag.object);
+						if (i !== -1) {
+							let point = this.points[i];
+							
+							// loop through current keys and cleanup ones that will be orphaned
+							for (let key of Object.keys(point)) {
+								if (!I.point[key]) {
+									delete point[key];
+								}
+							}
+
+							for (let key of Object.keys(I.point).filter(e => e !== 'position')) {
+								point[key] = I.point[key];
+							}
+							this.setPosition(i, I.location)
+						}
+					}
 				}
 			};
 

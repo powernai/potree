@@ -9,10 +9,12 @@ export class Annotation extends EventDispatcher {
 	constructor (args = {}) {
 		super();
 
-		this._id = args.id || '';
+		this._id = args.id || "";
+		this.annotationId=args.annotationId
 		this.scene = null;
-		this._title = args.title || '';
-		this._description = args.description || '';
+		this._text = args.text || "";
+		this._title = args.title || "";
+		this._description = args.description || "";
 		this.offset = new THREE.Vector3();
 		this.uuid = THREE.Math.generateUUID();
 		this.scaleX = args.scaleX || 1.0;
@@ -61,50 +63,60 @@ export class Annotation extends EventDispatcher {
 
 		if (this.shape == "cloud") {
 			this.domElement = $(`
-				<div class="annotation" oncontextmenu="return false;">
-					<svg class="annotation-titlebar" width="2.2rem" height="2.0rem" viewBox="0 0 40 40" id="${this._id}">
-						<path d="M69.7342 193.406C62.4304 174.217 64.9745 158.596 77.3666 146.545C103.099 121.52 114 122 146.545 
-							135.127C147.99 135.127 171.68 102 199.783 102C217.851 102 223.03 106.135 229.115 113.016C235.2 119.897 
-							243.189 133.018 243.189 136.731C243.189 140.444 274.012 128.532 298.832 130.49C337.503 133.542 392.346 
-							170.505 339.793 204.917C350.551 207.358 356.672 213.365 358.155 222.938C360.381 237.297 357.184 263.192 
-							331.997 280.462C306.809 297.731 294.841 300.2 269.015 297.731C243.189 295.261 214.556 274.496 212.091 
-							271.31C209.625 268.124 215.309 276.772 189.446 287.251C163.584 297.731 136.528 297.731 108.263 280.462C103.196 
-							277.366 101.377 271.486 102.805 262.821C90.5901 267.786 78.4655 267.786 66.4309 262.821C48.3792 255.373 32.8758 
-							244.641 41.4096 229.569C47.0989 219.52 52.8885 213.514 58.7785 211.551"
-							stroke-width="16" stroke-linecap="round" stroke-linejoin="round" 
-							transform-origin="center" transform="translate(-180, -200)"
-							fill="none" stroke="#${this.color}" id="${this._id}"
-						/>
-						<text class="annotation-label" x="50%" y="50%" fill="#${this.textColor}" dominant-baseline="middle" text-anchor="middle" id="${this._id}" />
-					</svg>
-					<div class="annotation-description">
-						<span class="annotation-description-close">
-							<img src="${iconClose}" width="16px">
-						</span>
-						<div class="annotation-description-content">${this._description}</div>
+					<div class="annotation" oncontextmenu="return false;">
+						<svg class="annotation-titlebar" width="2.2rem" height="2.0rem" viewBox="0 0 40 40" id="${this._id}">
+							<path d="M69.7342 193.406C62.4304 174.217 64.9745 158.596 77.3666 146.545C103.099 121.52 114 122 146.545 
+								135.127C147.99 135.127 171.68 102 199.783 102C217.851 102 223.03 106.135 229.115 113.016C235.2 119.897 
+								243.189 133.018 243.189 136.731C243.189 140.444 274.012 128.532 298.832 130.49C337.503 133.542 392.346 
+								170.505 339.793 204.917C350.551 207.358 356.672 213.365 358.155 222.938C360.381 237.297 357.184 263.192 
+								331.997 280.462C306.809 297.731 294.841 300.2 269.015 297.731C243.189 295.261 214.556 274.496 212.091 
+								271.31C209.625 268.124 215.309 276.772 189.446 287.251C163.584 297.731 136.528 297.731 108.263 280.462C103.196 
+								277.366 101.377 271.486 102.805 262.821C90.5901 267.786 78.4655 267.786 66.4309 262.821C48.3792 255.373 32.8758 
+								244.641 41.4096 229.569C47.0989 219.52 52.8885 213.514 58.7785 211.551"
+								stroke-width="16" stroke-linecap="round" stroke-linejoin="round" 
+								transform-origin="center" transform="translate(-180, -200)"
+								fill="none" stroke="#${this.color}" id="${this._id}"
+							/>
+							<text class="annotation-label" x="50%" y="50%" fill="#${this.textColor}" dominant-baseline="middle" text-anchor="middle" id="${this._id}" />
+						</svg>
+						<div class="annotation-description">
+							<span class="annotation-description-close">
+								<img src="${iconClose}" width="16px">
+							</span>
+								<div class="annotation-title" style="font-weight: bold; margin-bottom: 5px;">
+								Title: ${this._title}
+							</div>
+							<div class="annotation-text">
+								Description: ${this._description}
+							</div>
+						</div>
 					</div>
-				</div>
-			`);
+				`);
 		} else {
 			this.domElement = $(`
-				<div class="annotation" oncontextmenu="return false;">
-					<svg class="annotation-titlebar" width="2.2rem" height="2.0rem" viewBox="0 -5 20 40" id="${this._id}">
-						<path d="M4.5 0H0.5C0.223858 0 0 0.223858 0 0.5V4.5C0 4.70223 0.121821 4.88455 0.308658 4.96194C0.495495 5.03933 0.710554 
-							4.99655 0.853553 4.85355L2.5 3.20711L14.1464 14.8536L14.8536 14.1464L3.20711 2.5L4.85355 0.853553C4.99655 0.710554 5.03933 
-							0.495495 4.96194 0.308658C4.88455 0.121821 4.70223 0 4.5 0Z" 
-							transform-origin="center" transform="translate(0, -200)"
-							fill="#${this.color}" stroke="#${this.color}" id="${this._id}"
-						/>
-						<text class="annotation-label" x="50%" y="50%" fill="#${this.textColor}" dominant-baseline="middle" text-anchor="middle" id="${this._id}" />
-					</svg>
-					<div class="annotation-description">
-						<span class="annotation-description-close">
-							<img src="${iconClose}" width="16px">
-						</span>
-						<div class="annotation-description-content">${this._description}</div>
+					<div class="annotation" oncontextmenu="return false;">
+						<svg class="annotation-titlebar" width="2.2rem" height="2.0rem" viewBox="0 -5 20 40" id="${this._id}">
+							<path d="M4.5 0H0.5C0.223858 0 0 0.223858 0 0.5V4.5C0 4.70223 0.121821 4.88455 0.308658 4.96194C0.495495 5.03933 0.710554 
+								4.99655 0.853553 4.85355L2.5 3.20711L14.1464 14.8536L14.8536 14.1464L3.20711 2.5L4.85355 0.853553C4.99655 0.710554 5.03933 
+								0.495495 4.96194 0.308658C4.88455 0.121821 4.70223 0 4.5 0Z" 
+								transform-origin="center" transform="translate(0, -200)"
+								fill="#${this.color}" stroke="#${this.color}" id="${this._id}"
+							/>
+							<text class="annotation-label" x="50%" y="50%" fill="#${this.textColor}" dominant-baseline="middle" text-anchor="middle" id="${this._id}" />
+						</svg>
+						<div class="annotation-description">
+							<span class="annotation-description-close">
+								<img src="${iconClose}" width="16px">
+							</span>
+								<div class="annotation-title" style="font-weight: bold; margin-bottom: 5px;">
+								Title: ${this._title}
+							</div>
+							<div class="annotation-text">
+								Description: ${this._description}
+							</div>
+						</div>
 					</div>
-				</div>
-			`);
+				`);
 		}
 		// } else {
 		// 	// Dot
@@ -124,11 +136,14 @@ export class Annotation extends EventDispatcher {
 		// 	`);
 		// }
 
-		this.elTitlebar = this.domElement.find('.annotation-titlebar');
-		this.elTitle = this.elTitlebar.find('.annotation-label');
-		this.elTitle.append(this._title);
-		this.elDescription = this.domElement.find('.annotation-description');
-		this.elDescriptionClose = this.elDescription.find('.annotation-description-close');
+		this.elTitlebar = this.domElement.find(".annotation-titlebar");
+		this.elTitlebar[0].setAttribute("annotationId",this.annotationId)
+		this.elTitle = this.elTitlebar.find(".annotation-label");
+		this.elTitle.append(this._text);
+		this.elDescription = this.domElement.find(".annotation-description");
+		this.elDescriptionClose = this.elDescription.find(
+			".annotation-description-close"
+		);
 		// this.elDescriptionContent = this.elDescription.find(".annotation-description-content");
 
 		// this.clickTitle = args.onClick;
@@ -203,79 +218,81 @@ export class Annotation extends EventDispatcher {
 		this.setColor = (color) => {
 			this.color = color;
 
-			let path = this.domElement.find('path')[0];
+			let path = this.domElement.find("path")[0];
 			path.setAttribute("stroke", `#${this.color}`);
 
 			if (this.shape == "cloud") {
-				path.setAttribute("fill", `none`);
+			path.setAttribute("fill", `none`);
 			} else {
-				path.setAttribute("fill", `#${this.color}`);
+			path.setAttribute("fill", `#${this.color}`);
 			}
 
 			this.dispatchEvent({
-				type: "annotation_changed",
-				annotation: this,
+			type: "annotation_changed",
+			annotation: this,
 			});
 		};
 
 		this.setTextColor = (color) => {
 			this.textColor = color;
 
-			let text = this.domElement.find('text')[0];
+			let text = this.domElement.find("text")[0];
 			text.setAttribute("fill", `#${this.textColor}`);
 
 			this.dispatchEvent({
-				type: "annotation_changed",
-				annotation: this,
+			type: "annotation_changed",
+			annotation: this,
 			});
 		};
 
 		this.setTitle = (title) => {
-			if (this._title === title) {
-				return;
+			if (this._text === title) {
+			return;
 			}
 
-			this._title = title;
+			this._text = title;
 			this.elTitle.empty();
-			this.elTitle.append(this._title);
+			this.elTitle.append(this._text);
 
 			this.dispatchEvent({
-				type: "annotation_changed",
-				annotation: this,
+			type: "annotation_changed",
+			annotation: this,
 			});
 		};
 
-		this.setDescription = (description) => {
-			if (this._description === description) {
-				return;
+		this.setDescription = (title,description) => {
+			if (this._description === description && this._title===title) {
+			return;
 			}
 
 			this._description = description;
-
-			const elDescriptionContent = this.elDescription.find(".annotation-description-content");
+			this._title=title
+			const elDescriptionContent = this.elDescription.find(
+			".annotation-description-content"
+			);
 			elDescriptionContent.empty();
 			elDescriptionContent.append(this._description);
 
 			this.dispatchEvent({
-				type: "annotation_changed",
-				annotation: this,
+			type: "annotation_changed",
+			annotation: this,
 			});
 		};
 
-		this.clickTitle = () => {
-			if(this.hasView()){
-				this.moveHere(this.scene.getActiveCamera());
+		this.clickTitle = (e) => {
+			if (this.hasView()) {
+			this.moveHere(this.scene.getActiveCamera());
 			}
-			this.dispatchEvent({type: 'click', target: this});
+			this.dispatchEvent({ type: "click", target: this });
 		};
 
 		this.elTitlebar.click(this.clickTitle);
 
-		this.actions = this.actions.map(a => {
+		this.actions = this.actions.map((a) => {
 			if (a instanceof Action) {
-				return a;
+			return a;
 			} else {
-				return new Action(a);
+			return new Action(a);
 			}
 		});
 
@@ -284,32 +301,34 @@ export class Annotation extends EventDispatcher {
 		}
 
 		let actions = this.actions.filter(
-			a => a.showIn === undefined || a.showIn.includes('scene'));
+			(a) => a.showIn === undefined || a.showIn.includes("scene")
+		);
 
 		for (let action of actions) {
-			let elButton = $(`<img src="${action.icon}" class="annotation-action-icon">`);
+			let elButton = $(
+			`<img src="${action.icon}" class="annotation-action-icon">`
+			);
 			this.elTitlebar.append(elButton);
-			elButton.click(() => action.onclick({annotation: this}));
+			elButton.click(() => action.onclick({ annotation: this }));
 		}
 
 		this.elDescriptionClose.hover(
-			e => this.elDescriptionClose.css('opacity', '1'),
-			e => this.elDescriptionClose.css('opacity', '0.5')
+			(e) => this.elDescriptionClose.css("opacity", "1"),
+			(e) => this.elDescriptionClose.css("opacity", "0.5")
 		);
-		this.elDescriptionClose.click(e => this.setHighlighted(false));
+		this.elDescriptionClose.click((e) => this.setHighlighted(false));
 		// this.elDescriptionContent.html(this._description);
 
-		this.domElement.mouseenter(e => this.setHighlighted(true));
-		this.domElement.mouseleave(e => this.setHighlighted(false));
+		this.domElement.mouseenter((e) => this.setHighlighted(true));
+		this.domElement.mouseleave((e) => this.setHighlighted(false));
 
-		this.domElement.on('touchstart', e => {
+		this.domElement.on("touchstart", (e) => {
 			this.setHighlighted(!this.isHighlighted);
 		});
 
 		this.display = false;
 		//this.display = true;
-
-	}
+		}
 
 	installHandles(viewer){
 		if(this.handles !== undefined){
@@ -534,29 +553,28 @@ export class Annotation extends EventDispatcher {
 	get id () {
 		return this._id;
 	}
-	
 	get title () {
-		return this._title;
+		return this._text;
 	}
 
-	set title (title) {
-		if (this._title === title) {
+	set title(title) {
+		if (this._text === title) {
 			return;
 		}
 
-		this._title = title;
+		this._text = title;
 		this.elTitle.empty();
-		this.elTitle.append(this._title);
+		this.elTitle.append(this._text);
 
 		this.dispatchEvent({
 			type: "annotation_changed",
 			annotation: this,
 		});
-	}
+		}
 
-	get description () {
+		get description() {
 		return this._description;
-	}
+		}
 
 	set description (description) {
 		if (this._description === description) {
@@ -565,7 +583,9 @@ export class Annotation extends EventDispatcher {
 
 		this._description = description;
 
-		const elDescriptionContent = this.elDescription.find(".annotation-description-content");
+		const elDescriptionContent = this.elDescription.find(
+			".annotation-description-content"
+		);
 		elDescriptionContent.empty();
 		elDescriptionContent.append(this._description);
 
@@ -573,7 +593,7 @@ export class Annotation extends EventDispatcher {
 			type: "annotation_changed",
 			annotation: this,
 		});
-	}
+		}
 
 	add (annotation) {
 		if (!this.children.includes(annotation)) {

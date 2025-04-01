@@ -60,7 +60,9 @@ export class OrbitControls extends EventDispatcher {
 
     this.tweens = [];
 
-    let drag = (e) => {
+	this.enabled =true;
+
+    this.drag = (e) => {
       if (
         e.drag.object !== null ||
         !this.scissorZoneIdxs.includes(e.drag.scissorZoneIdx)
@@ -93,11 +95,11 @@ export class OrbitControls extends EventDispatcher {
       }
     };
 
-    let drop = (e) => {
+    this.drop = (e) => {
       this.dispatchEvent({ type: "end" });
     };
 
-    let scroll = (e) => {
+    this.scroll = (e) => {
       if (!this.scissorZoneIdxs.includes(e.scissorZoneIdx)) return;
       // Added left click scroll for 3rd rotation axis.
       if (e.buttons === MOUSE.LEFT) {
@@ -112,14 +114,14 @@ export class OrbitControls extends EventDispatcher {
       this.dispatchEvent({ type: "end" });
     };
 
-    let dblclick = (e) => {
+    this.dblclick = (e) => {
       if (
         this.scissorZoneIdxs.includes(e.scissorZoneIdx) &&
         this.doubleClockZoomEnabled
       ) {
         // Make sure pointcloud is not behind anything.
         if (cpmsRaycaster) {
-          const raycast = cpmsRaycaster.castRay();
+          const raycast = cpmsRaycaster.castRay(undefined, "db");
           if (
             !raycast ||
             !raycast.object ||
@@ -135,15 +137,18 @@ export class OrbitControls extends EventDispatcher {
     };
 
     let previousTouch = null;
-    let touchStart = (e) => {
+    this.touchStart = (e) => {
       previousTouch = e;
     };
 
-    let touchEnd = (e) => {
+    this.touchEnd = (e) => {
       previousTouch = e;
     };
 
-    let touchMove = (e) => {
+    this.touchMove = (e) => {
+	  if (!this.scissorZoneIdxs.includes(e.scissorZoneIdx)) {
+		return;
+	  }
       if (e.touches.length === 2 && previousTouch.touches.length === 2) {
         let prev = previousTouch;
         let curr = e;
@@ -159,7 +164,7 @@ export class OrbitControls extends EventDispatcher {
         // Added div by 0 check
         if (prevDist != 0)
           // No need to use current radius to scale the delta here. That occurs in translation handling later.
-          this.translationDelta.y -= currDist / prevDist - 1;
+          this.translationDelta.y += currDist / prevDist - 1;
 
         this.stopTweens();
       } else if (e.touches.length === 3 && previousTouch.touches.length === 3) {
@@ -202,13 +207,13 @@ export class OrbitControls extends EventDispatcher {
       previousTouch = e;
     };
 
-    this.addEventListener("touchstart", touchStart);
-    this.addEventListener("touchend", touchEnd);
-    this.addEventListener("touchmove", touchMove);
-    this.addEventListener("drag", drag);
-    this.addEventListener("drop", drop);
-    this.addEventListener("mousewheel", scroll);
-    this.addEventListener("dblclick", dblclick);
+    this.addEventListener("touchstart", this.touchStart);
+    this.addEventListener("touchend", this.touchEnd);
+    this.addEventListener("touchmove", this.touchMove);
+    this.addEventListener("drag", this.drag);
+    this.addEventListener("drop", this.drop);
+    this.addEventListener("mousewheel", this.scroll);
+    this.addEventListener("dblclick", this.dblclick);
   }
 
   setScene(scene) {
@@ -221,12 +226,31 @@ export class OrbitControls extends EventDispatcher {
     this.rollDelta = 0;
     this.translationDelta.set(0, 0, 0);
   }
-
+  disableListeners() {
+    this.removeEventListener("touchstart", this.touchStart);
+    this.removeEventListener("touchend", this.touchEnd);
+    this.removeEventListener("touchmove", this.touchMove);
+    this.removeEventListener("drag", this.drag);
+    this.removeEventListener("drop", this.drop);
+    this.removeEventListener("mousewheel", this.scroll);
+    this.removeEventListener("dblclick", this.dblclick);
+	this.enabled=false;
+  }
+  enableListeners() {
+    this.addEventListener("touchstart", this.touchStart);
+    this.addEventListener("touchend", this.touchEnd);
+    this.addEventListener("touchmove", this.touchMove);
+    this.addEventListener("drag", this.drag);
+    this.addEventListener("drop", this.drop);
+    this.addEventListener("mousewheel", this.scroll);
+    this.addEventListener("dblclick", this.dblclick);
+	this.enabled=true;
+  }
   zoomToBIM(boundingBox) {
     let camera;
     let view;
     for (let i = 0; i < this.scissorZoneIdxs.length; i++) {
-      if (!this.viewer.scissorZones[this.scissorZoneIdxs[i]].visible) continue;
+      if (!this.viewer.getScissorVisible(this.scissorZoneIdxs[i])) continue;
       camera = this.viewer.getCamera(this.scissorZoneIdxs[i]);
       view = this.viewer.getView(this.scissorZoneIdxs[i]);
     }
@@ -294,7 +318,7 @@ export class OrbitControls extends EventDispatcher {
     let I;
     let i;
     for (i = 0; i < this.scissorZoneIdxs.length; i++) {
-      if (!this.viewer.scissorZones[this.scissorZoneIdxs[i]].visible) continue;
+      if (!this.viewer.getScissorVisible(this.scissorZoneIdxs[i])) continue;
       camera = this.viewer.getCamera(this.scissorZoneIdxs[i]);
 
       I = Utils.getMousePointCloudIntersection(
@@ -405,7 +429,7 @@ export class OrbitControls extends EventDispatcher {
         let roll = view.roll;
         let pivot = view.getPivot();
 
-        switch(this.allowedRotation) {
+        switch (this.allowedRotation) {
           case "all":
             yaw -= progression * this.yawDelta;
             pitch -= progression * this.pitchDelta;
@@ -421,7 +445,7 @@ export class OrbitControls extends EventDispatcher {
           case "z":
             yaw -= progression * this.yawDelta;
             break;
-          }
+        }
 
         view.yaw = yaw;
         view.pitch = pitch;

@@ -325,7 +325,7 @@ export class OrientedImageLoader{
 				// Backwards loop so the last rendered canvas (the one on top) catches the mouse in case of an overlap.
 				let scissorWithMouse;
 				for (scissorWithMouse = viewer.scissorZones.length - 1; scissorWithMouse >= 0; scissorWithMouse--) {
-					if (!viewer.scissorZones[scissorWithMouse].visible)
+					if (!viewer.getScissorVisible(scissorWithMouse))
 						continue;
 					const scissor = viewer.getScissor(scissorWithMouse);
 					if (
