@@ -39,7 +39,7 @@ class Image360{
 		this.pitch = pitch;
 		this.roll = roll;
 		this.mesh = null;
-		this.annotations= [];
+		this.markers= [];
 	}
 };
 
@@ -369,7 +369,7 @@ export class Images360 extends EventDispatcher{
 		for (let i = viewer.scissorZones.length - 1; i >= 0; i--) {
 			// Find correct scissor zone.
 			if (
-				!viewer.scissorZones[i].visible ||
+				!viewer.getScissorVisible(i) ||
 				!viewer.scissorZones[i].scene.images360.includes(this)
 			)
 				continue;
