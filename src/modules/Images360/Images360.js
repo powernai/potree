@@ -339,6 +339,41 @@ export class Images360 extends EventDispatcher{
 
 		this.unfocusAction(image);
 	}
+
+	updateSphere() {
+		if (!this.focusedImage) return;
+
+			const image360 = this.focusedImage;
+
+			this.sphere.position.copy(image360.mesh.position);
+
+			{ 
+				let {course, pitch, roll} = image360;
+				this.sphere.rotation.set(0, 0, 0, 'ZYX');
+				
+				this.sphere.rotation.set(THREE.MathUtils.degToRad(course), THREE.MathUtils.degToRad(pitch), THREE.MathUtils.degToRad(roll), 'ZYX');
+				this.sphere.rotateY(THREE.MathUtils.degToRad(-90));
+				this.sphere.rotateX(THREE.MathUtils.degToRad(180));
+
+				this.sphere.renderOrder = 999;
+				this.sphere.onBeforeRender = function (renderer) {
+					renderer.clearDepth();
+				};
+			}
+
+			let target = new THREE.Vector3();
+			image360.mesh.getWorldPosition(target);
+			
+			let dir = this.viewer.scene.view.direction.clone().normalize();
+			let move = dir.multiplyScalar(0.000001);
+			let newCamPos = target.clone().sub(move);
+			
+			this.viewer.scene.view.setView(
+				newCamPos, 
+				target,
+				0
+			);
+	}
 	
 	setFocusAction(action=(image)=>{}) {
 		this.focusAction = action;
