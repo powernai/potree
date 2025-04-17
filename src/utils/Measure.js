@@ -960,7 +960,7 @@ export class Measure extends THREE.Object3D {
 					this.calcVolume = false;
 				}
 			}
-			let displayVolume = this.volume;
+			let displayVolume = (typeof this.volume === 'number' && !isNaN(this.volume)) ? this.volume : 0;
 			let suffix = "";
 			if (this.lengthUnit != null && this.lengthUnitDisplay != null) {
 				displayVolume =
