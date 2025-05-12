@@ -1636,6 +1636,7 @@ export class Viewer extends EventDispatcher{
 			premultipliedAlpha: false,
 			canvas: canvas,
 			context: context});
+		this.renderer.outputEncoding = THREE.sRGBEncoding;
 		this.renderer.sortObjects = false;
 		this.renderer.setSize(width, height);
 		this.renderer.autoClear = false;
