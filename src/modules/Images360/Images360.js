@@ -239,9 +239,9 @@ export class Images360 extends EventDispatcher{
 			//to render at last so that its always visible ahead of BIM
 			this.sphere.renderOrder = 999;
 			//clearDepth removes any depthBuffer the render has so that the next object is always rendered and shown on top
-			this.sphere.onBeforeRender = function (renderer) {
-				renderer.clearDepth();
-			};
+			// this.sphere.onBeforeRender = function (renderer) {
+			// 	renderer.clearDepth();
+			// };
 		}
 
 		this.sphere.position.copy(image360.mesh.position);
@@ -356,9 +356,9 @@ export class Images360 extends EventDispatcher{
 				this.sphere.rotateX(THREE.MathUtils.degToRad(180));
 
 				this.sphere.renderOrder = 999;
-				this.sphere.onBeforeRender = function (renderer) {
-					renderer.clearDepth();
-				};
+				// this.sphere.onBeforeRender = function (renderer) {
+				// 	renderer.clearDepth();
+				// };
 			}
 
 			let target = new THREE.Vector3();
