@@ -23,7 +23,7 @@ export class NavigationCube extends THREE.Object3D {
 			ctx.font = "64px sans-serif";
 			ctx.textBaseline = "middle";
 			ctx.textAlign = "center";
-			ctx.fillStyle = "#222a32"; // cubeColor from CPMS
+			ctx.fillStyle = "#000000"; // cubeColor from CPMS
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
 			ctx.fillStyle = "white"; // color of the text in cube
 			ctx.fillText(img, this.width / 2, this.width / 2);
