@@ -121,12 +121,14 @@ export class InputHandler extends EventDispatcher {
 					el.object._listeners['drag'].length > 0));
 
 			if (target) {
-				target.object.material.emissive.setHex(0x888888);
+				if (target.object.material.emissive)
+					target.object.material.emissive.setHex(0x888888);
 				this.lastTarget = target;
 				this.startDragging(target.object, {location: target.point}, scissorIdx);
 			} else {
 				if (this.lastTarget) {
-					this.lastTarget.object.material.emissive.setHex(0x000000);
+					if (this.lastTarget.object.material.emissive)
+						this.lastTarget.object.material.emissive.setHex(0x000000);
 					this.lastTarget = null;
 				}
 				this.startDragging(null, null, scissorIdx);
@@ -225,7 +227,8 @@ export class InputHandler extends EventDispatcher {
 				mouse: this.mouse,
 			});
 			if (this.lastTarget) {
-				this.lastTarget.object.material.emissive.setHex(0x000000);
+				if (this.lastTarget.object.material.emissive)
+					this.lastTarget.object.material.emissive.setHex(0x000000);
 				this.lastTarget = null;
 			}
 		}
