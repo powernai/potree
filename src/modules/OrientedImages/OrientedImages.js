@@ -45,6 +45,8 @@ function createMaterial(){
 		vertexShader: vertexShader,
 		fragmentShader: fragmentShader,
 		side: THREE.DoubleSide,
+    	depthWrite: false, // Prevent occluding BIM
+    	transparent: true,
 	} );
 
 	material.side = THREE.DoubleSide;
