@@ -318,7 +318,7 @@ export class Images360 extends EventDispatcher{
 					if(this.focusedImage === null) {
 						if(this.visible) {
 							for(let image of this.images){
-								image.mesh.scale.set(1,1,1);
+								image.mesh.scale.set(1/this.node.scale.x, 1/this.node.scale.y, 1/this.node.scale.z);
 							}
 						}
 						this.selectingEnabled = true;
@@ -330,7 +330,7 @@ export class Images360 extends EventDispatcher{
 			if(this.focusedImage === null) {
 				if(this.visible) {
 					for(let image of this.images){
-						image.mesh.scale.set(1,1,1);
+						image.mesh.scale.set(1/this.node.scale.x, 1/this.node.scale.y, 1/this.node.scale.z);
 					}
 				}
 				this.selectingEnabled = true;
