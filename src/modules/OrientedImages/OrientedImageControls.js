@@ -87,12 +87,80 @@ export class OrientedImageControls extends EventDispatcher{
 				this.release();
 			}
 		};
+
+
+		let touches = [
+			{
+				x: 0,
+				y: 0
+			},
+			{
+				x: 0,
+				y: 0
+			},
+		];
+		
+		let touchStart = (e) => {
+			if (this.image) {
+				if (e.touches.length === 2) {
+					touches[1].x = e.changedTouches[1].clientX;
+					touches[1].y = e.changedTouches[1].clientY;
+				}
+				touches[0].x = e.changedTouches[0].clientX;
+				touches[0].y = e.changedTouches[0].clientY;
+			}
+		};
+
+		let touchEnd = (e) => {
+			touches[0].x = 0;
+			touches[0].y = 0;
+			touches[1].x = 0;
+			touches[1].y = 0;
+		};
+		
+		let touchMove = (e) => {
+			// console.debug(e);
+			if (this.image) {
+				if (e.touches.length === 2 && touches[1].x > 0 && touches[1].y > 0) {
+					let translationDelta = 0;
+
+					let prevDX = touches[0].clientX - touches[1].clientX;
+					let prevDY = touches[0].clientY - touches[1].clientY;
+					let prevDist = Math.sqrt(prevDX * prevDX + prevDY * prevDY);
+
+					let currDX = e.touches[0].clientX - e.touches[1].clientX;
+					let currDY = e.touches[0].clientY - e.touches[1].clientY;
+					let currDist = Math.sqrt(currDX * currDX + currDY * currDY);
+
+					if (prevDist != 0)
+						translationDelta += currDist / prevDist - 1;
+
+					this.fovDelta += -translationDelta * 1.0;
+
+					touches[1].x = e.changedTouches[1].clientX;
+					touches[1].y = e.changedTouches[1].clientY;
+				} else {
+					let movementX = e.changedTouches[0].clientX - touches[0].x;
+					let movementY = e.changedTouches[0].clientY - touches[0].y;
+
+					this.left(movementX/window.innerWidth);
+					this.up(movementY/window.innerHeight);
+				}
+
+				touches[0].x = e.changedTouches[0].clientX;
+				touches[0].y = e.changedTouches[0].clientY;
+			}
+		};
 		
 		//controls
 		this.addEventListener('mousewheel', scroll);
 		this.addEventListener('mousedown', mouseDown);
 		this.addEventListener('mouseup', mouseUp);
 		window.addEventListener('mousemove', mouseMove);
+
+		this.addEventListener('touchstart', touchStart);
+		this.addEventListener('touchend', touchEnd);
+		window.addEventListener('touchmove', touchMove);
 		
 		//exit
 		// window.addEventListener('mousedown', (e)=>{
