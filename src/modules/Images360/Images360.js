@@ -235,6 +235,12 @@ export class Images360 extends EventDispatcher{
 			this.sphere.rotation.set(THREE.MathUtils.degToRad(course), THREE.MathUtils.degToRad(pitch), THREE.MathUtils.degToRad(roll), 'ZYX');
 			this.sphere.rotateY(THREE.MathUtils.degToRad(-90));
 			this.sphere.rotateX(THREE.MathUtils.degToRad(180));
+			// this.sphere.rotation.set(
+				// 	THREE.Math.degToRad(+roll + 90),
+				// 	THREE.Math.degToRad(-pitch),
+				// 	THREE.Math.degToRad(-course + 90),
+				// 	"ZYX"
+			// )
 
 			//to render at last so that its always visible ahead of BIM
 			this.sphere.renderOrder = 999;
@@ -300,8 +306,8 @@ export class Images360 extends EventDispatcher{
 			image.mesh.visible = true;
 			image.mesh.geometry = sg;
 			image.mesh.material = sm;
-			image.mesh.setRotationFromEuler(new THREE.Euler(0,0,0));
-			image.mesh.position.copy(image.defaultPosition);
+			// image.mesh.setRotationFromEuler(new THREE.Euler(0,0,0));
+			// image.mesh.position.copy(image.defaultPosition);
 		}
 		this.focusedImage = null;
 
@@ -561,6 +567,16 @@ export class Images360Loader{
 			mesh.material.transparent = true;
 			mesh.material.opacity = 0.6;
 			mesh.image360 = image360;
+
+			{ // orientation
+				var {course, pitch, roll} = image360;
+				mesh.rotation.set(
+					THREE.Math.degToRad(+roll + 90),
+					THREE.Math.degToRad(-pitch),
+					THREE.Math.degToRad(-course + 90),
+					"ZYX"
+				);
+			}
 
 			images360.node.add(mesh);
 
