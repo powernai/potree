@@ -104,6 +104,7 @@ export class OrientedImageControls extends EventDispatcher{
 		let touchMove = (e) => {
 			// console.debug(e);
 			if (this.image) {
+				console.debug(e.touches.length, previousTouch.touches.length);
 				if (e.touches.length === 2 && previousTouch.touches.length === 2) {
 					console.debug("NEW ZOOM");
 					let prev = previousTouch;
