@@ -102,29 +102,24 @@ export class OrientedImageControls extends EventDispatcher{
 		};
 		
 		let touchMove = (e) => {
-			console.debug("HELLO");
 			// console.debug(e);
 			if (this.image) {
 				console.debug(e.touches.length, previousTouch.touches.length);
 				if (e.touches.length === 2 && previousTouch.touches.length === 2) {
-					console.debug("NEW ZOOM");
 					let prev = previousTouch;
 					let curr = e;
 
 					let prevDX = prev.touches[0].pageX - prev.touches[1].pageX;
 					let prevDY = prev.touches[0].pageY - prev.touches[1].pageY;
 					let prevDist = Math.sqrt(prevDX * prevDX + prevDY * prevDY);
-					console.debug("prev: ", prevDX, prevDY, prevDist);
 
 					let currDX = curr.touches[0].pageX - curr.touches[1].pageX;
 					let currDY = curr.touches[0].pageY - curr.touches[1].pageY;
 					let currDist = Math.sqrt(currDX * currDX + currDY * currDY);
-					console.debug("curr: ", currDX, currDY, currDist);
 
 					// Added div by 0 check
 					if (prevDist != 0) {
-						this.fovDelta += currDist - prevDist;
-						console.debug("delta: ", this.fovDelta);
+						this.fovDelta += -(currDist - prevDist) / 2;
 					}
 
 				} else {
