@@ -119,7 +119,7 @@ export class OrientedImageControls extends EventDispatcher{
 
 					// Added div by 0 check
 					if (prevDist != 0) {
-						this.fovDelta += -(currDist - prevDist) / 2;
+						this.fovDelta += -(currDist - prevDist) / 10;
 					}
 
 				} else {
