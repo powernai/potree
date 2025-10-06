@@ -102,6 +102,7 @@ export class OrientedImageControls extends EventDispatcher{
 		};
 		
 		let touchMove = (e) => {
+			console.debug("HELLO");
 			// console.debug(e);
 			if (this.image) {
 				console.debug(e.touches.length, previousTouch.touches.length);
