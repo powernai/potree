@@ -89,66 +89,47 @@ export class OrientedImageControls extends EventDispatcher{
 		};
 
 
-		let touches = [
-			{
-				x: 0,
-				y: 0
-			},
-			{
-				x: 0,
-				y: 0
-			},
-		];
+		let previousTouch = null;
 		
 		let touchStart = (e) => {
 			if (this.image) {
-				if (e.touches.length === 2) {
-					touches[1].x = e.changedTouches[1].clientX;
-					touches[1].y = e.changedTouches[1].clientY;
-				}
-				touches[0].x = e.changedTouches[0].clientX;
-				touches[0].y = e.changedTouches[0].clientY;
+				previousTouch = e;
 			}
 		};
 
 		let touchEnd = (e) => {
-			touches[0].x = 0;
-			touches[0].y = 0;
-			touches[1].x = 0;
-			touches[1].y = 0;
+			previousTouch = e;
 		};
 		
 		let touchMove = (e) => {
 			// console.debug(e);
 			if (this.image) {
-				if (e.touches.length === 2 && touches[1].x > 0 && touches[1].y > 0) {
-					let translationDelta = 0;
+				if (e.touches.length === 2 && previousTouch.touches.length === 2) {
+					let prev = previousTouch;
+					let curr = e;
 
-					let prevDX = touches[0].clientX - touches[1].clientX;
-					let prevDY = touches[0].clientY - touches[1].clientY;
+					let prevDX = prev.touches[0].pageX - prev.touches[1].pageX;
+					let prevDY = prev.touches[0].pageY - prev.touches[1].pageY;
 					let prevDist = Math.sqrt(prevDX * prevDX + prevDY * prevDY);
 
-					let currDX = e.touches[0].clientX - e.touches[1].clientX;
-					let currDY = e.touches[0].clientY - e.touches[1].clientY;
+					let currDX = curr.touches[0].pageX - curr.touches[1].pageX;
+					let currDY = curr.touches[0].pageY - curr.touches[1].pageY;
 					let currDist = Math.sqrt(currDX * currDX + currDY * currDY);
 
+					// Added div by 0 check
 					if (prevDist != 0)
-						translationDelta += currDist / prevDist - 1;
+					// No need to use current radius to scale the delta here. That occurs in translation handling later.
+					this.translationDelta.y += currDist / prevDist - 1;
 
-					this.fovDelta += -translationDelta * 1.0;
-
-					touches[1].x = e.changedTouches[1].clientX;
-					touches[1].y = e.changedTouches[1].clientY;
 				} else {
-					let movementX = e.changedTouches[0].clientX - touches[0].x;
-					let movementY = e.changedTouches[0].clientY - touches[0].y;
+					let movementX = e.changedTouches[0].clientX - previousTouch.touches[0].clientX;
+					let movementY = e.changedTouches[0].clientY - previousTouch.touches[0].clientY;
 
 					this.left(movementX/window.innerWidth);
 					this.up(movementY/window.innerHeight);
 				}
 
-				touches[0].x = e.changedTouches[0].clientX;
-				touches[0].y = e.changedTouches[0].clientY;
+				previousTouch = e;
 			}
 		};
 		
