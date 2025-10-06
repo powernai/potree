@@ -105,21 +105,25 @@ export class OrientedImageControls extends EventDispatcher{
 			// console.debug(e);
 			if (this.image) {
 				if (e.touches.length === 2 && previousTouch.touches.length === 2) {
+					console.debug("NEW ZOOM");
 					let prev = previousTouch;
 					let curr = e;
 
 					let prevDX = prev.touches[0].pageX - prev.touches[1].pageX;
 					let prevDY = prev.touches[0].pageY - prev.touches[1].pageY;
 					let prevDist = Math.sqrt(prevDX * prevDX + prevDY * prevDY);
+					console.debug("prev: ", prevDX, prevDY, prevDist);
 
 					let currDX = curr.touches[0].pageX - curr.touches[1].pageX;
 					let currDY = curr.touches[0].pageY - curr.touches[1].pageY;
 					let currDist = Math.sqrt(currDX * currDX + currDY * currDY);
+					console.debug("curr: ", currDX, currDY, currDist);
 
 					// Added div by 0 check
-					if (prevDist != 0)
-					// No need to use current radius to scale the delta here. That occurs in translation handling later.
-					this.translationDelta.y += currDist / prevDist - 1;
+					if (prevDist != 0) {
+						this.fovDelta += -currDist / prevDist - 1;
+						console.debug(this.fovDelta);
+					}
 
 				} else {
 					let movementX = e.changedTouches[0].clientX - previousTouch.touches[0].clientX;
