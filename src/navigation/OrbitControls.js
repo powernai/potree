@@ -246,7 +246,7 @@ export class OrbitControls extends EventDispatcher {
     this.addEventListener("dblclick", this.dblclick);
 	this.enabled=true;
   }
-  zoomToBIM(boundingBox) {
+  zoomToBIM(sphere) {
     let camera;
     let view;
     for (let i = 0; i < this.scissorZoneIdxs.length; i++) {
@@ -255,21 +255,26 @@ export class OrbitControls extends EventDispatcher {
       view = this.viewer.getView(this.scissorZoneIdxs[i]);
     }
 
-    const boxCenter = new THREE.Vector3();
-    boundingBox.getCenter(boxCenter);
+    const boxCenter = sphere.center;
+    // boundingBox.getCenter(boxCenter);
 
     // Calculate the size of the bounding box and its maximum dimension
-    const boxSize = new THREE.Vector3();
-    boundingBox.getSize(boxSize);
-    const maxDimension = Math.max(boxSize.x, boxSize.y, boxSize.z);
+    const boxSize = sphere.radius;
+    // boundingBox.getSize(boxSize);
+    // const maxDimension = Math.max(boxSize.x, boxSize.y, boxSize.z);
 
     // Calculate the distance from the camera to the center of the bounding box
     const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
-    const distance = maxDimension / 2 / Math.tan(halfFov);
+    const distance = boxSize / 2 / Math.tan(halfFov);
+
+	const vFOV = camera.getEffectiveFOV() * MathUtils.DEG2RAD;
+	const hFOV = Math.atan( Math.tan( vFOV * 0.5 ) * camera.aspect ) * 2;
+	const fov = 1 < camera.aspect ? vFOV : hFOV;
+	const distance2 =  maxDimension / ( Math.sin( fov * 0.5 ) );
 
     // Zoom-in factor
     const zoomFactor = 0.8;
-    const zoomedDistance = distance * zoomFactor;
+    const zoomedDistance = distance2 * zoomFactor;
 
     // Calculate the new camera position
     const direction = new THREE.Vector3()
