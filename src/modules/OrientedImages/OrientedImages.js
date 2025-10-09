@@ -469,13 +469,29 @@ export class OrientedImageLoader{
 		const onMouseDown = (evt) => {
 			clicked = true;
 		}
-		const onMouseClick = (evt) => {
+		const onMouseClick = async (evt) => {
 			// Clicking from 2D image to 2D image does not currently work. Disabling clicks for now.
-			if (clicked && hoveredElement && !orientedImageControls.hasSomethingCaptured()) {
-				if (orientedImageControls.hasSomethingCaptured()) {
-					orientedImageControls.release();
+			if(cpmsRaycaster){
+				let object = null, hitOrientedImages = false;
+				try {
+					let res = await cpmsRaycaster.asyncCastRay();
+					object = res.object
 				}
-				moveToImage(hoveredElement);
+				catch(e) {}
+				while(object && !hitOrientedImages) {
+					if(object && object.current && object.current.object) {
+						hitOrientedImages = object.current.object.images === orientedImages;
+					}
+					if(object.parent)
+						object = object.parent;
+					else object = null
+				}
+				if (hitOrientedImages && clicked && hoveredElement && !orientedImageControls.hasSomethingCaptured()) {
+					if (orientedImageControls.hasSomethingCaptured()) {
+						orientedImageControls.release();
+					}
+					moveToImage(hoveredElement);
+				}
 			}
 		};
 
