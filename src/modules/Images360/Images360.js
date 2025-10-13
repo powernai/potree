@@ -84,16 +84,17 @@ export class Images360 extends EventDispatcher{
 
 		viewer.inputHandler.addInputListener(this);
 
-		this.focusFunction = () => {
+		this.focusFunction = async() => {
 			if(this.currentlyHovered && this.currentlyHovered.image360) {
 				// calling focus from mini scene's 360 images
 				if (this.isMiniscene) {
-					if (this.companionObject.focusedImage) {
 						let objIdx = this.node.children.indexOf(this.currentlyHovered);
 						this.companionObject.currentlyHovered = this.companionObject.node.children[objIdx];
 						this.companionObject.focus(this.companionObject.currentlyHovered.image360);
-					}
 				} else {
+					const asyncRaycast = await this.cpmsRaycaster.asyncCastRay();
+					if(!asyncRaycast || asyncRaycast.object !== this || viewer.navigationCube.hovered)
+						return;
 					// calling focus on clicking from main 4D scene
 					this.focus(this.currentlyHovered.image360);
 				}
