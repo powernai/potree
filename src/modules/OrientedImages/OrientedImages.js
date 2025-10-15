@@ -440,7 +440,13 @@ export class OrientedImageLoader{
 				);
 				*/
 
-				const imagePath = `${imageParamsPath}/../${target.id}`;
+				let imagePath;
+				if (imageParamsPath.includes("?")) {
+					const [baseUrl] = imageParamsPath.split("?");
+					imagePath = baseUrl.replace(/\/[^\/]+$/, `/${target.id}`);
+				} else {
+					imagePath = `${imageParamsPath}/../${target.id}`;
+				}
 				new THREE.TextureLoader().load(imagePath,
 					(texture) => {
 						// Moving fast, this image isn't focused anymore by the time the texture loads. Dispose the texture.

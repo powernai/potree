@@ -516,7 +516,7 @@ export class Images360Loader{
 		}
 		
 		// updated by Varun Veginati. This update is to use coordinates file in json format instead of txt file.
-		let response = await fetch(`${url}/coordinates.json`);
+		let response = await fetch(`${url}`);
 		let data = await response.json();
 
 		let lines = data.coordinates;
@@ -536,7 +536,23 @@ export class Images360Loader{
 			roll = parseFloat(roll);
 
 			filename = filename.replace(/"/g, "");
-			let file = `${url}/${filename}`;
+			
+			let file;
+			
+			let cleanFilename = filename;
+			if (filename.startsWith("../360Images/")) {
+				cleanFilename = filename.replace("../360Images/", "");
+			}
+			
+			// Create clean unsigned URL - let the interceptor handle S3 signing
+			if (url.includes("?")) {
+				// URL has query parameters - extract base URL and construct image path
+				const [baseUrl] = url.split("?");
+				file = baseUrl.replace("/coordinates/coordinates.json", `/360Images/${cleanFilename}`);
+			} else {
+				// Cloudfront
+				file = url.replace("/coordinates/coordinates.json", `/360Images/${cleanFilename}`);
+			}
 
 			let image360 = new Image360(file, time, long, lat, alt, course, pitch, roll);
 

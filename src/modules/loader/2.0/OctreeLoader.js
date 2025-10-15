@@ -35,7 +35,13 @@ export class NodeLoader{
 			let {byteOffset, byteSize} = node;
 
 
-			let urlOctree = `${this.url}/../octree.bin`;
+			let urlOctree;
+			if (this.url.includes("?")) {
+				const [baseUrl] = this.url.split("?");
+				urlOctree = `${baseUrl}/../octree.bin`;
+			} else {
+				urlOctree = `${this.url}/../octree.bin`;
+			}
 
 			let first = byteOffset;
 			let last = byteOffset + byteSize - 1n;
@@ -52,6 +58,10 @@ export class NodeLoader{
 						'Range': `bytes=${first}-${last}`,
 					},
 				});
+				if (!response.ok) {
+					console.error("Fetch failed:", response.status, response.statusText);
+					throw new Error(`Failed to fetch octree data: ${response.status}`);
+				}
 
 				buffer = await response.arrayBuffer();
 			}
@@ -245,7 +255,16 @@ export class NodeLoader{
 	async loadHierarchy(node){
 
 		let {hierarchyByteOffset, hierarchyByteSize} = node;
-		let hierarchyPath = `${this.url}/../hierarchy.bin`;
+		
+		let hierarchyPath;
+		if (this.url.includes("?")) {
+			// URL has query parameters, extract base URL and construct hierarchy path
+			const [baseUrl] = this.url.split("?");
+			hierarchyPath = `${baseUrl}/../hierarchy.bin`;
+		} else {
+			// Cloudfront
+			hierarchyPath = `${this.url}/../hierarchy.bin`;
+		}
 		
 		let first = hierarchyByteOffset;
 		let last = first + hierarchyByteSize - 1n;
