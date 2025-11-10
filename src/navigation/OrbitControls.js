@@ -114,14 +114,14 @@ export class OrbitControls extends EventDispatcher {
       this.dispatchEvent({ type: "end" });
     };
 
-    this.dblclick = (e) => {
+    this.dblclick = async (e) => {
       if (
         this.scissorZoneIdxs.includes(e.scissorZoneIdx) &&
         this.doubleClockZoomEnabled
       ) {
         // Make sure pointcloud is not behind anything.
         if (cpmsRaycaster) {
-          const raycast = cpmsRaycaster.castRay(undefined, "db");
+          const raycast = await cpmsRaycaster.asyncCastRay(undefined, "db");
           if (
             !raycast ||
             !raycast.object ||

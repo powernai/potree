@@ -87,12 +87,63 @@ export class OrientedImageControls extends EventDispatcher{
 				this.release();
 			}
 		};
+
+
+		let previousTouch = null;
+		
+		let touchStart = (e) => {
+			if (this.image) {
+				previousTouch = e;
+			}
+		};
+
+		let touchEnd = (e) => {
+			previousTouch = e;
+		};
+		
+		let touchMove = (e) => {
+			// console.debug(e);
+			if (this.image) {
+				console.debug(e.touches.length, previousTouch.touches.length);
+				if (e.touches.length === 2 && previousTouch.touches.length === 2) {
+					let prev = previousTouch;
+					let curr = e;
+
+					let prevDX = prev.touches[0].pageX - prev.touches[1].pageX;
+					let prevDY = prev.touches[0].pageY - prev.touches[1].pageY;
+					let prevDist = Math.sqrt(prevDX * prevDX + prevDY * prevDY);
+
+					let currDX = curr.touches[0].pageX - curr.touches[1].pageX;
+					let currDY = curr.touches[0].pageY - curr.touches[1].pageY;
+					let currDist = Math.sqrt(currDX * currDX + currDY * currDY);
+
+					// Added div by 0 check
+					if (prevDist != 0) {
+						let delta = currDist - prevDist;
+						this.fovDelta += -(delta / Math.abs(delta)) * Math.min(Math.abs(delta), 0.5);
+					}
+
+				} else {
+					let movementX = e.changedTouches[0].clientX - previousTouch.touches[0].clientX;
+					let movementY = e.changedTouches[0].clientY - previousTouch.touches[0].clientY;
+
+					this.left(movementX/window.innerWidth);
+					this.up(movementY/window.innerHeight);
+				}
+
+				previousTouch = e;
+			}
+		};
 		
 		//controls
 		this.addEventListener('mousewheel', scroll);
 		this.addEventListener('mousedown', mouseDown);
 		this.addEventListener('mouseup', mouseUp);
 		window.addEventListener('mousemove', mouseMove);
+
+		this.addEventListener('touchstart', touchStart);
+		this.addEventListener('touchend', touchEnd);
+		window.addEventListener('touchmove', touchMove);
 		
 		//exit
 		// window.addEventListener('mousedown', (e)=>{
