@@ -1,5 +1,13 @@
 
 import * as THREE from "../../libs/three.js/build/three.module.js";
+import { EffectComposer } from "../../libs/three.js/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "../../libs/three.js/examples/jsm/postprocessing/RenderPass.js";
+import { OutlinePass } from "../../libs/three.js/examples/jsm/postprocessing/OutlinePass.js";
+import { SAOPass } from '../../libs/three.js/examples/jsm/postprocessing/SAOPass.js';
+import { ShaderPass } from '../../libs/three.js/examples/jsm/postprocessing/ShaderPass.js';
+import { FXAAShader } from '../../libs/three.js/examples/jsm/shaders/FXAAShader.js';
+import { GammaCorrectionShader } from '../../libs/three.js/examples/jsm/shaders/GammaCorrectionShader.js';
+import { OutlineEffect } from '../../libs/three.js/examples/jsm/effects/OutlineEffect.js'
 
 //I dont think this is used ???
 export class PotreeRenderer {
@@ -17,6 +25,7 @@ export class PotreeRenderer {
 
 			this.dummyMesh = mesh;
 			this.dummyScene = dummyScene;
+			this.composer = null;
 		}
 	}
 
@@ -87,7 +96,50 @@ export class PotreeRenderer {
 		});
 		
 		// render scene
-		renderer.render(viewer.scissorZones[scissorIdx].scene.scene, camera);
+		if(!this.composer){
+			let composer = new EffectComposer(renderer)
+			const renderPass = new RenderPass(viewer.scissorZones[scissorIdx].scene.scene, camera)
+			
+			const outlinePass = new OutlinePass(
+				new THREE.Vector2(width, height),
+				viewer.scissorZones[scissorIdx].scene.scene, 
+				camera
+			);
+			outlinePass.edgeStrength = 4.0;
+			outlinePass.edgeGlow = 0.3;
+			outlinePass.edgeThickness = 1.0;
+			outlinePass.pulsePeriod = 0;
+			outlinePass.usePatternTexture = false;
+			outlinePass.visibleEdgeColor.set("#00ffff");
+			outlinePass.hiddenEdgeColor.set("#000000");
+			outlinePass.overlayMaterial.blending = THREE.NormalBlending;
+
+			let outlineEffect = new OutlineEffect(renderer, {
+				edgeStrength: 2.5,
+				blur: false
+			});
+			this.outlineEffect = outlineEffect
+
+			let saoPass = new SAOPass(viewer.scissorZones[scissorIdx].scene.scene, camera, false, true)
+			saoPass.params.saoIntensity = 0.02;
+			saoPass.params.saoScale = 100;
+			saoPass.params.saoBias = 0.5;
+
+			let fxaaPass = new ShaderPass(FXAAShader)
+			fxaaPass.material.uniforms['resolution'].value.set(1 / width, 1 / height);
+
+			let gammaPass = new ShaderPass(GammaCorrectionShader);
+
+			composer.addPass(renderPass)
+			composer.addPass(outlinePass)
+			composer.addPass(saoPass)
+			composer.addPass(fxaaPass);
+			composer.addPass(gammaPass);
+
+			this.composer = composer;
+		}
+
+		this.outlineEffect.render(viewer.scissorZones[scissorIdx].scene.scene, camera);
 
 		viewer.dispatchEvent({type: "render.pass.scene",viewer: viewer});
 		

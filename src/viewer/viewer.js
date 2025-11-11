@@ -1637,6 +1637,9 @@ export class Viewer extends EventDispatcher{
 			canvas: canvas,
 			context: context});
 		this.renderer.outputEncoding = THREE.sRGBEncoding;
+		this.renderer.physicallyCorrectLights = true;
+		this.renderer.toneMapping = THREE.ACESFilmicToneMapping
+		this.renderer.toneMappingExposure = 1.0;
 		this.renderer.sortObjects = false;
 		this.renderer.setSize(width, height);
 		this.renderer.autoClear = false;
