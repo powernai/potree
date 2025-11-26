@@ -9958,7 +9958,7 @@
 			return {
 				buffer: buffer,
 				type: type,
-				bytesPerElement: array.BYTES_PER_ELEMENT,
+				bytesPerElement: array?.BYTES_PER_ELEMENT,
 				version: attribute.version
 			};
 		}
