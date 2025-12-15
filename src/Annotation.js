@@ -22,7 +22,9 @@ export class Annotation extends EventDispatcher {
 		this.shape = args.shape || "cloud";
 		this.color = args.color || "ff0000";
 		this.textColor = args.textColor || "000000"
-
+		this.scaleFactor = 0.1
+		this.rotation = args.rotation || new THREE.Euler(0, 0, 0);
+		this.rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(this.rotation);
 		// set position
 		if (!args.position) {
 			this.position = new THREE.Vector3(0, 0, 0);
@@ -152,20 +154,32 @@ export class Annotation extends EventDispatcher {
 			this._visible = state;
 		};
 
-		this.setScale = (x, y) => {
+		this.setScale = (x, y , scaleFactor) => {
 			this.scaleX = x;
 			this.scaleY = y;
 
-			let scaleFactor = 0.1;
-			let realScaleX = this.scaleX * scaleFactor;
-			let realScaleY = this.scaleY * scaleFactor;
+			if(this.scaleFactor === scaleFactor) return;
 
-			this.elTitlebar.css("transform", `scale(${realScaleX}, ${realScaleY})`);
+			this.scaleFactor = Math.min(0.1, Math.max(0.01, scaleFactor));
+			let realScaleX = this.scaleX * this.scaleFactor;
+			let realScaleY = this.scaleY * this.scaleFactor;
+
+      		this.elTitlebar.css("transform", `scale(${realScaleX}, ${realScaleY}) 
+	                      matrix3d(${this.rotationMatrix.elements.join(",")})`);
 			let text = this.domElement.find('text');
-			let textX = (this.scaleX >= 2) ? (2 / scaleFactor / this.scaleX) : 1.0 / scaleFactor;
-			let textY = (this.scaleY >= 2) ? (2 / scaleFactor / this.scaleY) : 1.0 / scaleFactor;
+			const alpha = 0.5; 
+
+			const textScaleX = Math.pow(realScaleX, alpha);
+			const textScaleY = Math.pow(realScaleY, alpha);
+
+			const minTextScale = 6;
+			const maxTextScale = 12;
+
+			const finalTextScaleX = Math.max(minTextScale, Math.min(maxTextScale, textScaleX));
+			const finalTextScaleY = Math.max(minTextScale, Math.min(maxTextScale, textScaleY));
+
 			text.css("transform-origin", `center`);
-			text.css("transform", `scale(${textX}, ${textY})`);
+			text.css("transform", `scale(${finalTextScaleX}, ${finalTextScaleY})`);
 
 			let path = this.domElement.find('path')[0];
 			if (this.shape !== "cloud") {
@@ -827,9 +841,7 @@ export class Annotation extends EventDispatcher {
 		}
 
 		if (position) {
-			this.position.x = position.x;
-			this.position.y = position.y;
-			this.position.z = position.z;
+			this.position =new THREE.Vector3(position.x,position.y,position.z)
 
 			this.dispatchEvent({
 				type: "annotation_changed",
@@ -838,8 +850,40 @@ export class Annotation extends EventDispatcher {
 		}
 	}
 
-	setCamera(transformation) {
+    setRotation(rotation) {
+	if(!(rotation instanceof THREE.Euler)){
+	   this.rotation = new THREE.Euler(rotation.x,rotation.y,rotation.z)
+	}
+    if (rotation) {
+      this.rotation = rotation;
 
+      let camera = this.scene.getActiveCamera();
+
+      const cameraMatrix = new THREE.Matrix4().copy(camera.matrixWorld).invert();
+
+      const billboardMatrix = new THREE.Matrix4().makeRotationFromQuaternion(
+        new THREE.Quaternion().setFromRotationMatrix(cameraMatrix)
+      );
+
+      const customRotation = new THREE.Matrix4().makeRotationFromEuler(this.rotation);
+      const finalMatrix = new THREE.Matrix4().multiplyMatrices(
+        billboardMatrix,
+        customRotation
+      );
+	  this.rotationMatrix = finalMatrix
+      this.elTitlebar.css({
+        transform: `scale(${this.scaleX * 0.1}, ${
+          this.scaleY * 0.1
+        }) matrix3d(${finalMatrix.elements.join(",")})`,
+      });
+      this.dispatchEvent({
+        type: "annotation_changed",
+        annotation: this,
+      });
+    }
+  }
+
+  setCamera(transformation) {
 		if (this.cameraPosition) {
 			this.cameraPosition.x = transformation.position.x;
 			this.cameraPosition.y = transformation.position.y;
