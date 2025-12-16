@@ -45,6 +45,8 @@ function createMaterial(){
 		vertexShader: vertexShader,
 		fragmentShader: fragmentShader,
 		side: THREE.DoubleSide,
+    	depthWrite: false, // Prevent occluding BIM
+    	transparent: true,
 	} );
 
 	material.side = THREE.DoubleSide;
@@ -277,7 +279,7 @@ export class OrientedImageLoader{
 			if(orientedImageControls.hasSomethingCaptured())
 				return;
 			clicked = false;
-			const tStart = performance.now();
+			// const tStart = performance.now();
 			if(hoveredElement){
 				hoveredElement.line.material.color.setRGB(1, 1, 1);
 			}
@@ -412,7 +414,7 @@ export class OrientedImageLoader{
 				viewer.scene.addPolygonClipVolume(volume);
 				clipVolume = volume;
 			}
-			const tEnd = performance.now();
+			// const tEnd = performance.now();
 			//console.log(tEnd - tStart);
 		};
 
@@ -467,13 +469,169 @@ export class OrientedImageLoader{
 		const onMouseDown = (evt) => {
 			clicked = true;
 		}
-		const onMouseClick = (evt) => {
+		const onMouseClick = async (evt) => {
 			// Clicking from 2D image to 2D image does not currently work. Disabling clicks for now.
-			if (clicked && hoveredElement && !orientedImageControls.hasSomethingCaptured()) {
-				if (orientedImageControls.hasSomethingCaptured()) {
-					orientedImageControls.release();
+			if(cpmsRaycaster){
+				let object = null, hitOrientedImages = false;
+				try {
+					let res = await cpmsRaycaster.asyncCastRay();
+					object = res.object
 				}
-				moveToImage(hoveredElement);
+				catch(e) {}
+				while(object && !hitOrientedImages) {
+					if(object && object.current && object.current.object) {
+						hitOrientedImages = object.current.object.images === orientedImages;
+					}
+					if(object.parent)
+						object = object.parent;
+					else object = null
+				}
+				if (hitOrientedImages && clicked && hoveredElement && !orientedImageControls.hasSomethingCaptured()) {
+					if (orientedImageControls.hasSomethingCaptured()) {
+						orientedImageControls.release();
+					}
+					moveToImage(hoveredElement);
+				}
+			}
+		};
+
+		const onTouchStart = (evt) => {
+			if(orientedImageControls.hasSomethingCaptured())
+				return;
+			clicked = true;
+			if(hoveredElement){
+				hoveredElement.line.material.color.setRGB(1, 1, 1);
+			}
+			evt.preventDefault();
+
+			let hitOrientedImages = true;
+			if(cpmsRaycaster) {
+				// Check if the mouse is on 2DImages in front of everything else.
+				hitOrientedImages = false;
+				let object;
+				try {
+					object = cpmsRaycaster.castRay().object;
+				}
+				catch(e) {}
+				while(object && !hitOrientedImages) {
+					if(object && object.current && object.current.object) {
+						hitOrientedImages = object.current.object.images === orientedImages;
+					}
+					object = object.parent;
+				}
+			}
+
+			let intersects = [];
+			let correctScissor = false;
+			if(hitOrientedImages) {
+				//var array = getMousePosition( container, evt.clientX, evt.clientY );
+				const rect = viewer.renderer.domElement.getBoundingClientRect();
+				const [x, y] = [evt.changedTouches[0].clientX, evt.changedTouches[0].clientY];
+				// Get pixel position with respect to the canvas.
+				const mouse = new THREE.Vector2(
+					x - rect.left,
+					rect.bottom - y
+				);
+				//const intersects = getIntersects(onClickPosition, scene.children);
+				const camera = viewer.scene.getActiveCamera();
+
+				// Find the mini canvas containing the camera that the raycasts will be made with respect to.
+				let scissorWithImages;
+				for (scissorWithImages = viewer.scissorZones.length - 1; scissorWithImages >= 0; scissorWithImages--) {
+					if (camera == viewer.getCamera(scissorWithImages))
+						break;
+				}
+
+				// Find the mini canvas containing the mouse.
+				// Backwards loop so the last rendered canvas (the one on top) catches the mouse in case of an overlap.
+				let scissorWithMouse;
+				for (scissorWithMouse = viewer.scissorZones.length - 1; scissorWithMouse >= 0; scissorWithMouse--) {
+					if (!viewer.getScissorVisible(scissorWithMouse))
+						continue;
+					const scissor = viewer.getScissor(scissorWithMouse);
+					if (
+						mouse.x >= scissor.x &&
+						mouse.x <= scissor.x + scissor.width &&
+						mouse.y >= scissor.y &&
+						mouse.y <= scissor.y + scissor.height
+					)
+						break;
+				}
+
+				// Determine if the mini canvas containing the mouse also contains the 2D images.
+				correctScissor = scissorWithMouse == scissorWithImages && scissorWithMouse != -1;
+
+				// Convert to coordinates with (-1,-1) at the bottom left and (1,1) at the top right of the viewport.
+				const viewport = viewer.getViewport(scissorWithImages);
+				mouse
+					.sub(new THREE.Vector2(viewport.x, viewport.y))
+					.divide(new THREE.Vector2(viewport.width, viewport.height))
+					.multiplyScalar(2)
+					.sub(new THREE.Vector2(1, 1));
+
+				const objects = orientedImages.map(i => i.mesh);
+				raycaster.setFromCamera( mouse, camera );
+				intersects = raycaster.intersectObjects( objects );
+			}
+			let selectionChanged = false;
+
+			//added images._visible to trigger that
+			if ( intersects.length > 0 && images._visible === true && correctScissor && !viewer.navigationCube.hovered){
+				//console.log(intersects);
+				const intersection = intersects[0];
+				const orientedImage = intersection.object.orientedImage;
+				orientedImage.line.material.color.setRGB(1, 0, 0);
+				selectionChanged = hoveredElement !== orientedImage;
+				hoveredElement = orientedImage;
+			}else{
+				hoveredElement = null;
+			}
+
+			let shouldRemoveClipVolume = clipVolume !== null && hoveredElement === null;
+			let shouldAddClipVolume = clipVolume === null && hoveredElement !== null;
+
+			if(clipVolume !== null && (hoveredElement === null || selectionChanged)){
+				// remove existing
+				viewer.scene.removePolygonClipVolume(clipVolume);
+				clipVolume = null;
+			}
+			
+			if(shouldAddClipVolume || selectionChanged){
+				const img = hoveredElement;
+				const fov = cameraParams.fov;
+				const aspect  = cameraParams.width / cameraParams.height;
+				const near = 1.0;
+				const far = 1000 * 1000;
+				const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+				camera.rotation.order = viewer.scene.getActiveCamera().rotation.order;
+				camera.rotation.setFromQuaternion(new THREE.Quaternion().setFromEuler(img.mesh.parent.rotation).multiply(new THREE.Quaternion().setFromEuler(img.mesh.rotation)));
+				{
+					const mesh = img.mesh;
+					const dir = mesh.getWorldDirection().applyEuler(mesh.parent.rotation);
+					const pos = mesh.position.clone().multiply(mesh.parent.scale).applyEuler(mesh.parent.rotation).add(mesh.parent.position);
+					const alpha = THREE.Math.degToRad(fov / 2);
+					const d = 0.5 / Math.tan(alpha);
+					const newCamPos = pos.clone().add(dir.clone().multiplyScalar(d));
+					const newCamDir = pos.clone().sub(newCamPos);
+					const newCamTarget = new THREE.Vector3().addVectors(
+						newCamPos,
+						newCamDir.clone().multiplyScalar(viewer.getMoveSpeed()));
+					camera.position.copy(newCamPos);
+				}
+				let volume = new Potree.PolygonClipVolume(camera);
+				let m0 = new THREE.Mesh();
+				let m1 = new THREE.Mesh();
+				let m2 = new THREE.Mesh();
+				let m3 = new THREE.Mesh();
+				m0.position.set(-1, -1, 0);
+				m1.position.set( 1, -1, 0);
+				m2.position.set( 1,  1, 0);
+				m3.position.set(-1,  1, 0);
+				volume.markers.push(m0, m1, m2, m3);
+				volume.initialized = true;
+				
+				viewer.scene.addPolygonClipVolume(volume);
+				clipVolume = volume;
 			}
 		};
 		
@@ -481,11 +639,17 @@ export class OrientedImageLoader{
 			viewer.renderer.domElement.addEventListener( 'mousemove', onMouseMove, false );
 			viewer.renderer.domElement.addEventListener( 'mousedown', onMouseDown, false );
 			viewer.renderer.domElement.addEventListener( 'mouseup', onMouseClick, false );
+
+			viewer.renderer.domElement.addEventListener( 'touchstart', onTouchStart, false );
+			viewer.renderer.domElement.addEventListener( 'touchend', onMouseClick, false );
 		}
 		const releaseListeners = () => {
 			viewer.renderer.domElement.removeEventListener( 'mousemove', onMouseMove, false );
 			viewer.renderer.domElement.removeEventListener( 'mousedown', onMouseDown, false );
 			viewer.renderer.domElement.removeEventListener( 'mouseup', onMouseClick, false );
+
+			viewer.renderer.domElement.removeEventListener( 'touchstart', onTouchStart, false );
+			viewer.renderer.domElement.removeEventListener( 'touchend', onMouseClick, false );
 		}
 		
 		addListeners();
