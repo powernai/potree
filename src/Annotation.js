@@ -22,7 +22,9 @@ export class Annotation extends EventDispatcher {
 		this.shape = args.shape || "cloud";
 		this.color = args.color || "ff0000";
 		this.textColor = args.textColor || "000000"
-
+		this.scaleFactor = 0.1
+		this.rotation = args.rotation || new THREE.Euler(0, 0, 0);
+		this.rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(this.rotation);
 		// set position
 		if (!args.position) {
 			this.position = new THREE.Vector3(0, 0, 0);
@@ -65,6 +67,7 @@ export class Annotation extends EventDispatcher {
 			this.domElement = $(`
 					<div class="annotation" oncontextmenu="return false;">
 						<svg class="annotation-titlebar" width="2.2rem" height="2.0rem" viewBox="0 0 40 40" id="${this._id}">
+							<g class="path-wrapper" >
 							<path d="M69.7342 193.406C62.4304 174.217 64.9745 158.596 77.3666 146.545C103.099 121.52 114 122 146.545 
 								135.127C147.99 135.127 171.68 102 199.783 102C217.851 102 223.03 106.135 229.115 113.016C235.2 119.897 
 								243.189 133.018 243.189 136.731C243.189 140.444 274.012 128.532 298.832 130.49C337.503 133.542 392.346 
@@ -77,6 +80,7 @@ export class Annotation extends EventDispatcher {
 								transform-origin="center" transform="translate(-180, -200)"
 								fill="none" stroke="#${this.color}" id="${this._id}"
 							/>
+							</g>
 							<text class="annotation-label" x="50%" y="50%" fill="#${this.textColor}" dominant-baseline="middle" text-anchor="middle" id="${this._id}" />
 						</svg>
 						<div class="annotation-description">
@@ -96,12 +100,14 @@ export class Annotation extends EventDispatcher {
 			this.domElement = $(`
 					<div class="annotation" oncontextmenu="return false;">
 						<svg class="annotation-titlebar" width="2.2rem" height="2.0rem" viewBox="0 -5 20 40" id="${this._id}">
+						<g class="path-wrapper" >
 							<path d="M4.5 0H0.5C0.223858 0 0 0.223858 0 0.5V4.5C0 4.70223 0.121821 4.88455 0.308658 4.96194C0.495495 5.03933 0.710554 
 								4.99655 0.853553 4.85355L2.5 3.20711L14.1464 14.8536L14.8536 14.1464L3.20711 2.5L4.85355 0.853553C4.99655 0.710554 5.03933 
 								0.495495 4.96194 0.308658C4.88455 0.121821 4.70223 0 4.5 0Z" 
 								transform-origin="center" transform="translate(0, -200)"
 								fill="#${this.color}" stroke="#${this.color}" id="${this._id}"
 							/>
+						</g>
 							<text class="annotation-label" x="50%" y="50%" fill="#${this.textColor}" dominant-baseline="middle" text-anchor="middle" id="${this._id}" />
 						</svg>
 						<div class="annotation-description">
@@ -152,20 +158,35 @@ export class Annotation extends EventDispatcher {
 			this._visible = state;
 		};
 
-		this.setScale = (x, y) => {
+		this.setScale = (x, y , scaleFactor) => {
 			this.scaleX = x;
 			this.scaleY = y;
 
-			let scaleFactor = 0.1;
-			let realScaleX = this.scaleX * scaleFactor;
-			let realScaleY = this.scaleY * scaleFactor;
+			if(this.scaleFactor === scaleFactor) return;
 
-			this.elTitlebar.css("transform", `scale(${realScaleX}, ${realScaleY})`);
+			this.scaleFactor = Math.min(0.1, Math.max(0.01, scaleFactor));
+			let realScaleX = this.scaleX * this.scaleFactor;
+			let realScaleY = this.scaleY * this.scaleFactor;
+
+      		this.elTitlebar.css("transform", `scale(${realScaleX}, ${realScaleY})`);
+			let pathWrapper =this.domElement.find('.path-wrapper');
+			pathWrapper.css({
+			transform: `matrix3d(${this.rotationMatrix.elements.join(",")})`,
+			});
 			let text = this.domElement.find('text');
-			let textX = (this.scaleX >= 2) ? (2 / scaleFactor / this.scaleX) : 1.0 / scaleFactor;
-			let textY = (this.scaleY >= 2) ? (2 / scaleFactor / this.scaleY) : 1.0 / scaleFactor;
+			const alpha = 0.5; 
+
+			const textScaleX = Math.pow(realScaleX, alpha);
+			const textScaleY = Math.pow(realScaleY, alpha);
+
+			const minTextScale = 6;
+			const maxTextScale = 12;
+
+			const finalTextScaleX = Math.max(minTextScale, Math.min(maxTextScale, textScaleX));
+			const finalTextScaleY = Math.max(minTextScale, Math.min(maxTextScale, textScaleY));
+
 			text.css("transform-origin", `center`);
-			text.css("transform", `scale(${textX}, ${textY})`);
+			text.css("transform", `scale(${finalTextScaleX}, ${finalTextScaleY})`);
 
 			let path = this.domElement.find('path')[0];
 			if (this.shape !== "cloud") {
@@ -827,9 +848,7 @@ export class Annotation extends EventDispatcher {
 		}
 
 		if (position) {
-			this.position.x = position.x;
-			this.position.y = position.y;
-			this.position.z = position.z;
+			this.position =new THREE.Vector3(position.x,position.y,position.z)
 
 			this.dispatchEvent({
 				type: "annotation_changed",
@@ -838,8 +857,39 @@ export class Annotation extends EventDispatcher {
 		}
 	}
 
-	setCamera(transformation) {
+    setRotation(rotation) {
+	if(!(rotation instanceof THREE.Euler)){
+	   this.rotation = new THREE.Euler(rotation.x,rotation.y,rotation.z)
+	}
+    if (rotation) {
+      this.rotation = rotation;
 
+      let camera = this.scene.getActiveCamera();
+
+      const cameraMatrix = new THREE.Matrix4().copy(camera.matrixWorld).invert();
+
+      const billboardMatrix = new THREE.Matrix4().makeRotationFromQuaternion(
+        new THREE.Quaternion().setFromRotationMatrix(cameraMatrix)
+      );
+
+      const customRotation = new THREE.Matrix4().makeRotationFromEuler(this.rotation);
+      const finalMatrix = new THREE.Matrix4().multiplyMatrices(
+        billboardMatrix,
+        customRotation
+      );
+	  this.rotationMatrix = finalMatrix
+	  let pathWrapper =this.domElement.find('.path-wrapper');
+      pathWrapper.css({
+        transform: `matrix3d(${finalMatrix.elements.join(",")})`,
+      });
+      this.dispatchEvent({
+        type: "annotation_changed",
+        annotation: this,
+      });
+    }
+  }
+
+  setCamera(transformation) {
 		if (this.cameraPosition) {
 			this.cameraPosition.x = transformation.position.x;
 			this.cameraPosition.y = transformation.position.y;
