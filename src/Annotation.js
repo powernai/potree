@@ -864,23 +864,23 @@ export class Annotation extends EventDispatcher {
     if (rotation) {
       this.rotation = rotation;
 
-      let camera = this.scene.getActiveCamera();
+    //   let camera = this.scene.getActiveCamera();
 
-      const cameraMatrix = new THREE.Matrix4().copy(camera.matrixWorld).invert();
+    //   const cameraMatrix = new THREE.Matrix4().copy(camera.matrixWorld).invert();
 
-      const billboardMatrix = new THREE.Matrix4().makeRotationFromQuaternion(
-        new THREE.Quaternion().setFromRotationMatrix(cameraMatrix)
-      );
+    //   const billboardMatrix = new THREE.Matrix4().makeRotationFromQuaternion(
+    //     new THREE.Quaternion().setFromRotationMatrix(cameraMatrix)
+    //   );
 
       const customRotation = new THREE.Matrix4().makeRotationFromEuler(this.rotation);
-      const finalMatrix = new THREE.Matrix4().multiplyMatrices(
-        billboardMatrix,
-        customRotation
-      );
-	  this.rotationMatrix = finalMatrix
+    //   const finalMatrix = new THREE.Matrix4().multiplyMatrices(
+    //     billboardMatrix,
+    //     customRotation
+    //   );
+	  this.rotationMatrix = customRotation
 	  let pathWrapper =this.domElement.find('.path-wrapper');
       pathWrapper.css({
-        transform: `matrix3d(${finalMatrix.elements.join(",")})`,
+        transform: `matrix3d(${customRotation.elements.join(",")})`,
       });
       this.dispatchEvent({
         type: "annotation_changed",
