@@ -73,6 +73,8 @@ export class Images360 extends EventDispatcher{
 		this.sphere.scale.set(1000, 1000, 1000);
 		this.node.add(this.sphere);
 		this._visible = true;
+		this.overrideWithFM =false
+		this.fileManagerVisible = false; 
 		this.manager = manager;
 		// this.node.add(label);
 
@@ -143,6 +145,11 @@ export class Images360 extends EventDispatcher{
 
 	get visible(){
 		return this._visible;
+	}
+	
+	setFileManagerVisibility(override, state){
+	   this.overrideWithFM =override
+	   this.fileManagerVisible = state
 	}
 
 	focus(image360){
@@ -481,7 +488,7 @@ export class Images360 extends EventDispatcher{
 			this.handleHovering(viewer);
 		}
 
-		const newVisible = this.manager.shouldBeVisible(this);
+		const newVisible = this.overrideWithFM ? this.fileManagerVisible : this.manager.shouldBeVisible(this);
 		if(newVisible && !this.visible) {
 			this.show();
 		}

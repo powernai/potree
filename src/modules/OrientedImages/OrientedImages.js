@@ -139,7 +139,8 @@ export class OrientedImages extends EventDispatcher{
 		}
 
 		for(const image of this.images){
-			image.mesh.visible = visible;
+			// upon user interaction mesh is visible
+			// image.mesh.visible = visible;
 			image.line.visible = visible;
 		}
 
