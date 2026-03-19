@@ -419,10 +419,10 @@ export class OrientedImageLoader{
 			//console.log(tEnd - tStart);
 		};
 
-		const moveToImage = (image) => {
+		const moveToImage = (image , saveOldCam = true) => {
 			console.log("move to image " + image.id);
 
-			orientedImageControls.capture(image);
+			orientedImageControls.capture(image , saveOldCam);
 
 			if(image.texture === null){
 
