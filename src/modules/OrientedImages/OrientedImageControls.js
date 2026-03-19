@@ -187,7 +187,7 @@ export class OrientedImageControls extends EventDispatcher{
 		return this.image !== null;
 	}
 
-	capture(image){
+	capture(image , saveOldCam = true){
 		if(this.hasSomethingCaptured()){
 			return;
 		}
@@ -199,8 +199,10 @@ export class OrientedImageControls extends EventDispatcher{
 		const newCamTarget = mesh.position.clone().multiply(mesh.parent.scale).applyEuler(mesh.parent.rotation).add(mesh.parent.position);
 	
 		// Save old position to return to after.
-		this.oldCamPos = this.viewer.scene.view.position.clone();
-		this.oldCamTarget = this.viewer.scene.view.getPivot();
+		if (saveOldCam || !(this.oldCamPos && this.oldCamTarget)) {
+			this.oldCamPos = this.viewer.scene.view.position.clone();
+			this.oldCamTarget = this.viewer.scene.view.getPivot();
+		}
 
 		this.viewer.scene.view.setView(newCamPos, newCamTarget, 500, () => {
 			this.originalFOV = this.viewer.getFOV();
