@@ -573,6 +573,7 @@ export class Viewer extends EventDispatcher{
 						$("#potree_annotation_container").append(node.domElement);
 						//this.renderArea.appendChild(node.domElement[0]);
 						node.scene = this.scissorZones[idx].scene;
+						node.setRotation(node.rotation)
 					});
 				};
 			}
@@ -1695,7 +1696,6 @@ export class Viewer extends EventDispatcher{
 			if (!annotation.visible) {
 				return false;
 			}
-
 			annotation.scene = this.scene;
 
 			let element = annotation.domElement;
@@ -1711,6 +1711,8 @@ export class Viewer extends EventDispatcher{
 			}
 
 			let distance = viewer.scene.cameraP.position.distanceTo(position);
+			let scaleFactor = 20 / distance
+			annotation.setScale(annotation.scaleX , annotation.scaleY , scaleFactor)
 			let radius = annotation.boundingBox.getBoundingSphere(new THREE.Sphere()).radius;
 
 			let screenPos = new THREE.Vector3();
