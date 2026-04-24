@@ -159,7 +159,11 @@ export class Images360 extends EventDispatcher{
 		}
 		else {
 			// When moving focus from one image to another, preserve the return position for the camera. Otherwise, set it from the current position.
-			previousView = {};
+			// After unfocus(true) during a time-slice switch, controls remain as orbitControls (setControls was skipped).
+			// Only reset previousView on a genuine fresh focus where controls have been restored to the original.
+			if (this.viewer.controls !== this.viewer.orbitControls) {
+				previousView = {};
+			}
 		}
 		this.manager.setSelected360(this.parent);
 		this.manager.showLinkedAnnotations(this.focusedImage,image360)
@@ -308,7 +312,12 @@ export class Images360 extends EventDispatcher{
 		*/
 
 		this.viewer.orbitControls.doubleClockZoomEnabled = true;
-		this.viewer.setControls(previousView.controls);
+		// Skip restoring controls on immediate unfocus (time-slice switch).
+		// This preserves viewer.controls === orbitControls as a signal used by focus()
+		// to detect a time-slice switch vs a genuine fresh focus.
+		if (!immediate) {
+			this.viewer.setControls(previousView.controls);
+		}
 
 		for(let image of this.images) {
 			image.mesh.visible = true;
