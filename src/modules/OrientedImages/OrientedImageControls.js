@@ -249,11 +249,15 @@ export class OrientedImageControls extends EventDispatcher{
 		//this.elRight.detach();
 		//this.elDown.detach();
 		//this.elLeft.detach();
-
-			this.viewer.setFOV(this.originalFOV);
-			this.viewer.setControls(this.originalControls);
-
-			this.image = null;
+            // Restore the original FOV and controls so 3D navigation works after exit.
+			// Guard against the edge case where capture's 500ms callback hasn't fired yet
+			// (originalControls not yet set) — in that case setControls was never called so nothing to restore.
+			if (this.originalFOV != null) {
+				this.viewer.setFOV(this.originalFOV);
+			}
+			if (this.originalControls != null) {
+				this.viewer.setControls(this.originalControls);
+			}
 		});
 	}
 
