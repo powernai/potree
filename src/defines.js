@@ -54,5 +54,5 @@ export const LengthUnits = {
 	YARD: {code: 'yd', unitspermeter: 1.09361},
 	FEET: {code: 'ft', unitspermeter: 3.28084},
 	INCH: {code: '\u2033', unitspermeter: 39.3701},
-	MILLIMETER: {code: 'mm', unitspermeter: 1000}
+	MILLIMETER: {code: 'mm', unitspermeter: 1000.0 }
 };
