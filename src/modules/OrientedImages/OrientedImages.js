@@ -139,7 +139,8 @@ export class OrientedImages extends EventDispatcher{
 		}
 
 		for(const image of this.images){
-			image.mesh.visible = visible;
+			// upon user interaction mesh is visible
+			// image.mesh.visible = visible;
 			image.line.visible = visible;
 		}
 
@@ -418,10 +419,10 @@ export class OrientedImageLoader{
 			//console.log(tEnd - tStart);
 		};
 
-		const moveToImage = (image) => {
+		const moveToImage = (image , saveOldCam = true) => {
 			console.log("move to image " + image.id);
 
-			orientedImageControls.capture(image);
+			orientedImageControls.capture(image , saveOldCam);
 
 			if(image.texture === null){
 

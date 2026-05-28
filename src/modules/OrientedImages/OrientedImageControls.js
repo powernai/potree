@@ -187,7 +187,7 @@ export class OrientedImageControls extends EventDispatcher{
 		return this.image !== null;
 	}
 
-	capture(image){
+	capture(image , saveOldCam = true){
 		if(this.hasSomethingCaptured()){
 			return;
 		}
@@ -199,8 +199,10 @@ export class OrientedImageControls extends EventDispatcher{
 		const newCamTarget = mesh.position.clone().multiply(mesh.parent.scale).applyEuler(mesh.parent.rotation).add(mesh.parent.position);
 	
 		// Save old position to return to after.
-		this.oldCamPos = this.viewer.scene.view.position.clone();
-		this.oldCamTarget = this.viewer.scene.view.getPivot();
+		if (saveOldCam || !(this.oldCamPos && this.oldCamTarget)) {
+			this.oldCamPos = this.viewer.scene.view.position.clone();
+			this.oldCamTarget = this.viewer.scene.view.getPivot();
+		}
 
 		this.viewer.scene.view.setView(newCamPos, newCamTarget, 500, () => {
 			this.originalFOV = this.viewer.getFOV();
@@ -247,11 +249,15 @@ export class OrientedImageControls extends EventDispatcher{
 		//this.elRight.detach();
 		//this.elDown.detach();
 		//this.elLeft.detach();
-
-			this.viewer.setFOV(this.originalFOV);
-			this.viewer.setControls(this.originalControls);
-
-			this.image = null;
+            // Restore the original FOV and controls so 3D navigation works after exit.
+			// Guard against the edge case where capture's 500ms callback hasn't fired yet
+			// (originalControls not yet set) — in that case setControls was never called so nothing to restore.
+			if (this.originalFOV != null) {
+				this.viewer.setFOV(this.originalFOV);
+			}
+			if (this.originalControls != null) {
+				this.viewer.setControls(this.originalControls);
+			}
 		});
 	}
 
