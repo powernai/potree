@@ -948,6 +948,9 @@ export class Viewer extends EventDispatcher{
 			case 'in':
 				this.lengthUnit = LengthUnits.INCH;
 				break;
+			case 'mm':
+				this.lengthUnit = LengthUnits.MILLIMETER;
+				break;
 		}
 
 		switch (lengthUnitDisplayValue) {
@@ -962,6 +965,9 @@ export class Viewer extends EventDispatcher{
 				break;
 			case 'in':
 				this.lengthUnitDisplay = LengthUnits.INCH;
+				break;
+			case 'mm':
+				this.lengthUnitDisplay = LengthUnits.MILLIMETER;
 				break;
 		}
 
