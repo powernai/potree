@@ -671,7 +671,10 @@ export class OrientedImageLoader{
 				const minSize = 1; // in degrees of fov
 				const a = THREE.Math.degToRad(minSize);
 				let r = d * Math.tan(a);
-				r = Math.max(r, 1);
+				// Floor well below scene scale: a fixed 1-unit floor made every
+				// marker 1m wide, which dwarfs a sub-meter scene (e.g. a cm cloud
+				// converted to meters). r stays screen-constant at any scale.
+				r = Math.max(r, 1e-4);
 
 
 				image.mesh.scale.set(r * aspect, r, 1);
