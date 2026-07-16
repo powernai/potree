@@ -680,11 +680,13 @@ float getPointSize(){
 	#if defined fixed_point_size
 		pointSize = size;
 	#elif defined attenuated_point_size
+		// World-space size: size * root octree spacing, independent of LOD.
+		// (The old "spacing" here was a vertex attribute the 2.0 loader never
+		// provides, so it read 0 and every point collapsed to minSize.)
 		if(uUseOrthographicCamera){
-			pointSize = size;
+			pointSize = (size * uOctreeSpacing / uOrthoWidth) * uScreenWidth;
 		}else{
-			pointSize = size * spacing * projFactor;
-			//pointSize = pointSize * projFactor;
+			pointSize = size * uOctreeSpacing * projFactor;
 		}
 	#elif defined adaptive_point_size
 		if(uUseOrthographicCamera) {
