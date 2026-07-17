@@ -674,7 +674,6 @@ export class OrientedImageLoader{
 				let r = d * Math.tan(a);
 				r = Math.max(r, image.unitFactor || 1);
 
-
 				image.mesh.scale.set(r * aspect, r, 1);
 				image.line.scale.set(r * aspect, r, 1);
 
