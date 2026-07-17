@@ -382,22 +382,14 @@ export class OrientedImageLoader{
 				const img = hoveredElement;
 				const fov = cameraParams.fov;
 				const aspect  = cameraParams.width / cameraParams.height;
-				const near = 1.0;
+				const near = 1.0 * (img.unitFactor || 1);
 				const far = 1000 * 1000;
 				const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
 				camera.rotation.order = viewer.scene.getActiveCamera().rotation.order;
 				camera.rotation.setFromQuaternion(new THREE.Quaternion().setFromEuler(img.mesh.parent.rotation).multiply(new THREE.Quaternion().setFromEuler(img.mesh.rotation)));
 				{
 					const mesh = img.mesh;
-					const dir = mesh.getWorldDirection().applyEuler(mesh.parent.rotation);
-					const pos = mesh.position.clone().multiply(mesh.parent.scale).applyEuler(mesh.parent.rotation).add(mesh.parent.position);
-					const alpha = THREE.Math.degToRad(fov / 2);
-					const d = 0.5 / Math.tan(alpha);
-					const newCamPos = pos.clone().add(dir.clone().multiplyScalar(d));
-					const newCamDir = pos.clone().sub(newCamPos);
-					const newCamTarget = new THREE.Vector3().addVectors(
-						newCamPos,
-						newCamDir.clone().multiplyScalar(viewer.getMoveSpeed()));
+					const newCamPos = img.position.clone().multiply(mesh.parent.scale).applyEuler(mesh.parent.rotation).add(mesh.parent.position);
 					camera.position.copy(newCamPos);
 				}
 				let volume = new Potree.PolygonClipVolume(camera);
@@ -421,6 +413,17 @@ export class OrientedImageLoader{
 
 		const moveToImage = (image , saveOldCam = true) => {
 			console.log("move to image " + image.id);
+
+			// Clear hover leftovers (red outline + clip volume) so they
+			// don't linger in the focused view.
+			if(hoveredElement){
+				hoveredElement.line.material.color.setRGB(1, 1, 1);
+				hoveredElement = null;
+			}
+			if(clipVolume !== null){
+				viewer.scene.removePolygonClipVolume(clipVolume);
+				clipVolume = null;
+			}
 
 			orientedImageControls.capture(image , saveOldCam);
 
@@ -601,22 +604,16 @@ export class OrientedImageLoader{
 				const img = hoveredElement;
 				const fov = cameraParams.fov;
 				const aspect  = cameraParams.width / cameraParams.height;
-				const near = 1.0;
+				// Near plane must shrink with the source unit, or it culls the
+				// whole cloud in unit-shrunk scenes where everything is <1m away.
+				const near = 1.0 * (img.unitFactor || 1);
 				const far = 1000 * 1000;
 				const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
 				camera.rotation.order = viewer.scene.getActiveCamera().rotation.order;
 				camera.rotation.setFromQuaternion(new THREE.Quaternion().setFromEuler(img.mesh.parent.rotation).multiply(new THREE.Quaternion().setFromEuler(img.mesh.rotation)));
 				{
 					const mesh = img.mesh;
-					const dir = mesh.getWorldDirection().applyEuler(mesh.parent.rotation);
-					const pos = mesh.position.clone().multiply(mesh.parent.scale).applyEuler(mesh.parent.rotation).add(mesh.parent.position);
-					const alpha = THREE.Math.degToRad(fov / 2);
-					const d = 0.5 / Math.tan(alpha);
-					const newCamPos = pos.clone().add(dir.clone().multiplyScalar(d));
-					const newCamDir = pos.clone().sub(newCamPos);
-					const newCamTarget = new THREE.Vector3().addVectors(
-						newCamPos,
-						newCamDir.clone().multiplyScalar(viewer.getMoveSpeed()));
+					const newCamPos = img.position.clone().multiply(mesh.parent.scale).applyEuler(mesh.parent.rotation).add(mesh.parent.position);
 					camera.position.copy(newCamPos);
 				}
 				let volume = new Potree.PolygonClipVolume(camera);
@@ -657,7 +654,11 @@ export class OrientedImageLoader{
 
 		viewer.addEventListener("update", () => {
 
+			const captured = orientedImageControls.image;
+
 			for(const image of orientedImages){
+				image.line.visible = !captured && images._visible;
+
 				const world = image.mesh.matrixWorld;
 				const {width, height} = image;
 				const aspect = width / height;
@@ -671,11 +672,7 @@ export class OrientedImageLoader{
 				const minSize = 1; // in degrees of fov
 				const a = THREE.Math.degToRad(minSize);
 				let r = d * Math.tan(a);
-				// Floor well below scene scale: a fixed 1-unit floor made every
-				// marker 1m wide, which dwarfs a sub-meter scene (e.g. a cm cloud
-				// converted to meters). r stays screen-constant at any scale.
-				r = Math.max(r, 1e-4);
-
+				r = Math.max(r, image.unitFactor || 1);
 
 				image.mesh.scale.set(r * aspect, r, 1);
 				image.line.scale.set(r * aspect, r, 1);
