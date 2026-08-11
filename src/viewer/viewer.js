@@ -1962,7 +1962,8 @@ export class Viewer extends EventDispatcher{
 				const tEnd = performance.now();
 
 				if(result.lowestSpacing !== Infinity){
-					let near = result.lowestSpacing * 10.0;
+					// Keep near low to avoid culling small BIMs
+					let near = 0.1; // result.lowestSpacing * 10.0;
 					let far = -this.getBoundingBox().applyMatrix4(camera.matrixWorldInverse).min.z;
 
 					far = Math.max(far * 1.5, 10000);
